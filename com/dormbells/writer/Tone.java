@@ -1,5 +1,11 @@
 package com.dormbells.writer;
 
+/**
+ * The mapping between note names and frequencies,
+ * i.e. the best substitute for C #defines...
+ * 
+ * @author Varun Sampath <vsampath@seas.upenn.edu>
+ */
 public enum Tone {
     C (63), // 261 Hz
     D (56), // 294 Hz
