@@ -3,6 +3,9 @@ package com.dormbells.writer;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
@@ -21,7 +24,12 @@ import gnu.io.UnsupportedCommOperationException;
  */
 public class Writer {
 
-	private static final String PORT_NAME = "/dev/ttyUSB0";	// communication port
+	private enum Mode {
+		GUI,
+		File,
+		Internal;
+	}
+
 	private static final int BAUD_RATE = 9600;				// communication speed (baud)
 	private static final int ACK = 53;						// Acknowledgment byte sent by MSP430
 
@@ -124,21 +132,100 @@ public class Writer {
 	}
 
 	/**
-	 * Usage cases (implementation not complete):
-	 * -i send internal song data (Happy Birthday)
-	 * -f take file input for song data (pass filename as second argument)
-	 * no arguments will invoke GUI
+	 * Usage cases:
+	 * no arguments will invoke GUI (not implemented)
+	 * if arguments given, one must be comm port
+	 * -f take file input for song data (pass filename as next argument) (not implemented)
+	 * if no -f, internal mode is assumed
+	 * 
+	 * @param commPorts list of communication ports
+	 * @param args command-line arguments
+	 * @return options data for main() to interpret.  [0] is Mode, [1] is comm port, 
+	 * and [2] is additional arg if any
+	 */
+	private static String[] optParse(List<String> commPorts, String args[]) {
+		String commPort = null;
+		boolean validComm = true;
+		String[] returnVal = new String[3];
+		if (args.length == 0) {
+			// since this is GUI invocation, will have drop down box option
+			returnVal[0] = "GUI";
+		} 
+		else if (args.length == 1) {
+			// only argument must be comm port, assume internal mode
+			commPort = args[0];
+		} 
+		else {
+			// search for comm port argument.  It can't have a '-' prefix nor be the argument to a '-f'
+			int i = 0;
+			while (i < args.length && commPort == null) {
+				if ((args[i].charAt(0) != '-') && ((i > 0 && !args[i-1].equals("-f")) || i == 0))
+					commPort = args[i];
+				i++;
+			}
+			validComm = !(i == args.length && commPort == null);
+			if (validComm) {
+				// check for '-f' option (file input)
+				for (i = 0; i < args.length; i++) {
+					if (args[i].equals("-f")) {
+						if ((i+1) < args.length) {
+							returnVal[0] = "File";
+							returnVal[2] = args[i+1];
+							break;
+						}
+						else {
+							System.err.println("No input file given, exiting");
+							System.exit(-2);
+						}
+					}
+				}
+			}
+		}
+		// check if comm port found is valid
+		validComm &= commPorts.contains(commPort);
+		if (!validComm) {
+			System.err.println("No valid communications port given. Choose from these next time:");
+			for (String s : commPorts) System.err.print(s + " ");
+			System.err.println();
+			System.exit(-1);
+		}
+
+		// Assume internal mode unless given otherwise
+		if (returnVal[0] == null) returnVal[0] = "Internal";
+		returnVal[1] = commPort;
+		return returnVal;
+	}
+
+	/**
+	 * See optParse Javadoc for usage cases.
 	 * @param args
 	 */
 	public static void main(String args[]) {
 		Writer w = null;
+		// find all communications ports
+		List<String> commPorts = new ArrayList<String>();
+		@SuppressWarnings("unchecked")
+		Enumeration<CommPortIdentifier> en = CommPortIdentifier.getPortIdentifiers();
+		while (en.hasMoreElements())
+			commPorts.add(en.nextElement().getName());
+		if (commPorts.isEmpty()) {
+			System.err.println("No communication ports present, exiting");
+			System.exit(-1);
+		}
+
+		// Options parsing
+		String[] opts = optParse(commPorts, args);
+		Mode mode = Mode.valueOf(opts[0]);
+		String commPort = opts[1];
+		//String input = opts[2];
+
 		try {
-			w = new Writer(PORT_NAME);
+			w = new Writer(commPort);
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		if (args.length == 1 && args[0].equals("-i")) {
+		if (mode == Mode.Internal) {
 			w.send();
 		}
 	}
