@@ -1,6 +1,5 @@
 package com.dormbells.writer;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,11 +29,10 @@ public class Writer {
 		Internal;
 	}
 
-	private static final int BAUD_RATE = 9600;				// communication speed (baud)
-	private static final int ACK = 53;						// Acknowledgment byte sent by MSP430
+	private static final int BAUD_RATE = 2400;				// communication speed (baud)
+	private static final boolean DEBUG = true;
 
 	// Data streams from serial communication
-	private BufferedInputStream in;
 	private BufferedOutputStream out;
 
 	// Data to transmit
@@ -59,7 +57,6 @@ public class Writer {
 		SerialPort sp = (SerialPort) commPort;
 		sp.setSerialPortParams(BAUD_RATE,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
 
-		in = new BufferedInputStream(sp.getInputStream());
 		out = new BufferedOutputStream(sp.getOutputStream(), 128);
 	}
 
@@ -116,19 +113,26 @@ public class Writer {
 	 */
 	void send() {
 		try {
+			if (DEBUG) System.err.println("Debug: Writing length");
 			writeByte(tones.length);
+			if (DEBUG) System.err.println("Debug: Writing pause");
 			writeByte(pause);
+			if (DEBUG) System.err.println("Debug: Writing tones");
 			writeArray(tones);
+			if (DEBUG) System.err.println("Debug: Flushing");
 			out.flush();
-			while (in.read() != ACK);
+			Thread.sleep(500);	// wait for MSP430 to write to flash
+			if (DEBUG) System.err.println("Debug: Writing tempo");
 			writeInt(tempo);
+			if (DEBUG) System.err.println("Debug: Writing beats");
 			writeArray(beats);
+			if (DEBUG) System.err.println("Debug: Flushing");
 			out.flush();
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 			System.exit(-1);
-		}
+		} catch (InterruptedException e) { }
 	}
 
 	/**
@@ -228,5 +232,6 @@ public class Writer {
 		if (mode == Mode.Internal) {
 			w.send();
 		}
+		System.exit(0);
 	}
 }
