@@ -27,7 +27,7 @@
 #define INFOMEM		(0x1000)
 
 #define BUF_SIZE	96
-#define LENGTH		(*(unsigned char *)(INFOMEM))	// that's where length is written
+#define LENGTH		(*(unsigned char *)(INFOMEM))	// where length is written
 
 #define BAUD_RATE 2400
 #define BIT_PER		417		// 1,000,000 / BAUD_RATE = us delay
@@ -77,7 +77,8 @@ int main(void)
 		*/
 	i = 0;
 	__enable_interrupt();
-	while (i < BUF_SIZE);
+	while (!buffer[0]);
+	while (i < buffer[0]+2);
 	__disable_interrupt();
 
 	// write constants to information memory (bottom of Segment D)
@@ -96,7 +97,7 @@ int main(void)
 
 	i = 0;
 	__enable_interrupt();
-	while (i < BUF_SIZE);
+	while (i < LENGTH + 2);
 	__disable_interrupt();
 
 	// write constant to middle of available info mem
@@ -181,8 +182,7 @@ unsigned char read()
 
 	// confirm that this is a real start bit, not line noise
 	if (!(P1IN & RXD)) {
-		int offset;
-		LED_OUT |= LED1;
+		unsigned char offset;
 		// frame start indicated by a falling edge and low start bit
 		// jump to the middle of the low start bit
 		delay(MAGIC);
@@ -193,11 +193,10 @@ unsigned char read()
 			delay(BIT_DEL3);
 
 			// read bit
-			val |= ((P1IN & RXD) ? 1 : 0) << offset;
+			val |= ((P1IN & RXD) > 0) << offset;
 		}
 
 		delay(BIT_PER3);
-		LED_OUT &= ~(LED1);
 
 		return val;
 	}
@@ -212,8 +211,10 @@ interrupt(PORT1_VECTOR) PORT1_ISR(void)
 __interrupt void PORT1_ISR(void)
 #endif
 {
-	P1IFG = 0;						// clear interrupt flag
+	LED_OUT |= LED1;
 	P1IE &= ~(RXD);				// disable interrupt
+	P1IFG &= ~(RXD);			// clear interrupt flag
 	buffer[i++] = read();	// read data
 	P1IE |= RXD;					// enable interrupt
+	LED_OUT &= ~(LED1);
 }

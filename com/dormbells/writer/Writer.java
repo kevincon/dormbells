@@ -31,16 +31,22 @@ public class Writer {
 
 	private static final int BAUD_RATE = 2400;				// communication speed (baud)
 	private static final boolean DEBUG = true;
+	private static final int DELAY = 2;
 
-	// Data streams from serial communication
+	// Data stream from serial communication
 	private BufferedOutputStream out;
 
 	// Data to transmit
 	private int pause = 33;
-	private int tempo = 11633;
+	//private int tempo = 11633;
+	private int tempo = 9;
+	/*
 	private Tone[] tones = { Tone.G, Tone.G, Tone.A, Tone.G, Tone.C, 
 			Tone.B, Tone.R, Tone.G, Tone.G, Tone.A, Tone.G, Tone.D, Tone.C, Tone.R };	// Java, your verbosity is painful sometimes
-	private int[] beats = { 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1 };
+			*/
+	private Tone[] tones = { Tone.A, Tone.A, Tone.A, Tone.A, Tone.A };
+	private int[] beats = { 1, 1, 1, 1, 1 };
+	//private int[] beats = { 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1 };
 
 	/**
 	 * Initializes serial communication and data streams.
@@ -57,54 +63,67 @@ public class Writer {
 		SerialPort sp = (SerialPort) commPort;
 		sp.setSerialPortParams(BAUD_RATE,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
 
-		out = new BufferedOutputStream(sp.getOutputStream(), 128);
+		out = new BufferedOutputStream(sp.getOutputStream(), 1);
 	}
 
 	/**
 	 * Send an 8-bit integer over the serial line.  Only the 8 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
-	private void writeByte(int num) throws IOException {
+	private void writeByte(int num) throws IOException, InterruptedException {
 		out.write(num);
+		Thread.sleep(DELAY);
 	}
 
 	/**
 	 * Send a 16-bit integer over the serial line.  Only the 16 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
-	private void writeInt(int num) throws IOException {
+	private void writeInt(int num) throws IOException, InterruptedException {
 		// since all Java variables are signed and 
 		// locals take 32-bits in JVM, might as well use ints
 		int LSB = num & 0xFF;
 		int MSB = (num >> 8) & 0xFF;
 		out.write(MSB);
+		Thread.sleep(DELAY);
 		out.write(LSB);
+		Thread.sleep(DELAY);
 	}
 
 	/**
 	 * Send the array of beats over the serial line.  As usual, all 24 higher bits are discarded.
 	 * @param arr array of beats to send
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
-	private void writeArray(int[] arr) throws IOException {
+	private void writeArray(int[] arr) throws IOException, InterruptedException {
 		byte[] bytes = new byte[arr.length];
-		for (int i = 0; i < arr.length; i++)
+		for (int i = 0; i < arr.length; i++) {
 			bytes[i] = (byte) arr[i];
-		out.write(bytes);
+			out.write(bytes[i]);
+			Thread.sleep(DELAY);
+		}
+		//out.write(bytes);
 	}
 
 	/**
 	 * Sends an array of tone frequencies over the serial line.  Frequencies are defined in the Tone Enum.
 	 * @param tones array of tones to send
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
-	private void writeArray(Tone[] tones) throws IOException {
+	private void writeArray(Tone[] tones) throws IOException, InterruptedException {
 		byte[] bytes = new byte[tones.length];
-		for (int i = 0; i < tones.length; i++)
+		for (int i = 0; i < tones.length; i++) {
 			bytes[i] = (byte) tones[i].freq;
-		out.write(bytes);
+			out.write(bytes[i]);
+			Thread.sleep(DELAY);
+		}
+		//out.write(bytes);
 	}
 
 	/**
@@ -133,6 +152,18 @@ public class Writer {
 			e.printStackTrace();
 			System.exit(-1);
 		} catch (InterruptedException e) { }
+	}
+	
+	/**
+	 * Closes all I/O Streams and terminates JVM.
+	 */
+	void exit() {
+		try {
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.exit(0);
 	}
 
 	/**
@@ -232,6 +263,6 @@ public class Writer {
 		if (mode == Mode.Internal) {
 			w.send();
 		}
-		System.exit(0);
+		w.exit();
 	}
 }
