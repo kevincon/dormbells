@@ -37,7 +37,8 @@
 #define MAGIC			60		// delayMicroseconds(bitDelay / 2 - 20 nee clockCyclesToMicroseconds(50)) / 3
 
 // GLOBALS  ========================================
-unsigned char buffer[BUF_SIZE];
+volatile unsigned char buffer[BUF_SIZE];
+volatile unsigned char i;
 
 // FUNCTION PROTOTYPES =============================
 
@@ -57,7 +58,6 @@ unsigned char read(void);
 int main(void)
 {
 	unsigned char *ptr;
-	unsigned char i;
 
 	WDTCTL = WDTPW + WDTHOLD;               // Stop WDT
 	init_clocks();
@@ -71,8 +71,14 @@ int main(void)
 	erase_seg((char *)SEGMENT_C);
 	erase_seg((char *)SEGMENT_D);
 
+	/*
 	for (i = 0; i < BUF_SIZE; i++)
 		buffer[i] = read();
+		*/
+	i = 0;
+	__enable_interrupt();
+	while (i < BUF_SIZE);
+	__disable_interrupt();
 
 	// write constants to information memory (bottom of Segment D)
 	ptr = (unsigned char *)INFOMEM;
@@ -83,8 +89,15 @@ int main(void)
 	for (i = 0; i < LENGTH; i++)
 		write_byte(buffer[i+2], ptr++);
 
+	/*
 	for (i = 0; i < BUF_SIZE; i++)
 		buffer[i] = read();
+		*/
+
+	i = 0;
+	__enable_interrupt();
+	while (i < BUF_SIZE);
+	__disable_interrupt();
 
 	// write constant to middle of available info mem
 	ptr = (unsigned char *)(INFOMEM + 192 / 2);
@@ -115,8 +128,10 @@ void init_leds(void)
 
 void init_serial()
 {
-	P1SEL |= RXD;
-	P1DIR &= ~(RXD);
+	P1DIR &= ~(RXD);	// change to input
+	P1IES |= RXD;			// interrupt on falling edge
+	P1IFG &= ~(RXD);	// clear interrupt flag
+	P1IE |= RXD;			// enable interrupt
 }
 
 void erase_seg(char *ptr)
@@ -162,12 +177,12 @@ unsigned char read()
 {
 	unsigned char val = 0;
 
-	LED_OUT |= LED1;
-	while (P1IN & RXD);
+	//while (P1IN & RXD);
 
 	// confirm that this is a real start bit, not line noise
 	if (!(P1IN & RXD)) {
 		int offset;
+		LED_OUT |= LED1;
 		// frame start indicated by a falling edge and low start bit
 		// jump to the middle of the low start bit
 		delay(MAGIC);
@@ -178,14 +193,27 @@ unsigned char read()
 			delay(BIT_DEL3);
 
 			// read bit
-			val |= ((P1IN & RXD)>>2) << offset;
+			val |= ((P1IN & RXD) ? 1 : 0) << offset;
 		}
 
 		delay(BIT_PER3);
-
 		LED_OUT &= ~(LED1);
+
 		return val;
 	}
 
 	return 0xFF;
+}
+
+#ifdef GCC
+interrupt(PORT1_VECTOR) PORT1_ISR(void)
+#else
+#pragma vector=PORT1_VECTOR
+__interrupt void PORT1_ISR(void)
+#endif
+{
+	P1IFG = 0;						// clear interrupt flag
+	P1IE &= ~(RXD);				// disable interrupt
+	buffer[i++] = read();	// read data
+	P1IE |= RXD;					// enable interrupt
 }
