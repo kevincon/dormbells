@@ -88,6 +88,7 @@ public class Writer {
 		// locals take 32-bits in JVM, might as well use ints
 		int LSB = num & 0xFF;
 		int MSB = (num >> 8) & 0xFF;
+		if (DEBUG) System.err.printf("LSB: %x\tMSB: %x\n", LSB, MSB);
 		out.write(MSB);
 		Thread.sleep(DELAY);
 		out.write(LSB);

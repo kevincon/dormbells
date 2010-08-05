@@ -33,9 +33,12 @@
 #define BIT_PER		417		// 1,000,000 / BAUD_RATE = us delay
 #define BIT_PER3	139		// BIT_PER / 3
 #define BIT_DEL		400 	// _bitPeriod - 17 nee clockCyclesToMicroseconds(50);
-#define BIT_DEL3	133 	// BIT_DEL / 3
+#define BIT_DEL3	132 	// BIT_DEL / 3 133
 #define MAGIC			60		// delayMicroseconds(bitDelay / 2 - 20 nee clockCyclesToMicroseconds(50)) / 3
 
+#define DELAY_CENTERING	139
+#define DELAY_INTRABIT	59
+#define DELAY_STOPBIT		59	
 // GLOBALS  ========================================
 volatile unsigned char buffer[BUF_SIZE];
 volatile unsigned char i;
@@ -48,7 +51,7 @@ void init_serial(void);
 
 void erase_seg(char *);
 void write_byte(unsigned char, unsigned char *);
-void write_word(unsigned int, unsigned int *);
+void write_word(unsigned int *, unsigned int *);
 
 static void __inline__ delay(register unsigned int n);
 unsigned char read(void);
@@ -102,7 +105,7 @@ int main(void)
 
 	// write constant to middle of available info mem
 	ptr = (unsigned char *)(INFOMEM + 192 / 2);
-	write_word((unsigned int)buffer[0], (unsigned int *)ptr);
+	write_word((unsigned int *)buffer, (unsigned int *)ptr);
 	ptr += 2;
 
 	// write beats
@@ -153,11 +156,11 @@ void write_byte(unsigned char data, unsigned char *ptr)
 	FCTL3 = FWKEY + LOCK;			// set LOCK
 }
 
-void write_word(unsigned int data, unsigned int *ptr)
+void write_word(unsigned int *data, unsigned int *ptr)
 {
 	FCTL3 = FWKEY;						// clear LOCK
 	FCTL1 = FWKEY + WRT;			// enable write
-	*ptr = data;							// write data
+	*ptr = *data;							// write data
 	FCTL1 = FWKEY;						// clear WRITE bit
 	FCTL3 = FWKEY + LOCK;			// set LOCK
 }
@@ -201,8 +204,35 @@ unsigned char read()
 		return val;
 	}
 
-	return 0xFF;
+	return 0x53;
 }
+
+/*
+unsigned char read()
+{
+	unsigned char val = 0;
+
+	if (!(P1IN & RXD)) {
+		unsigned char bit, notbit;
+
+		delay(DELAY_CENTERING);
+
+		for (bit = 1; bit; bit <<= 1) {
+			delay(DELAY_INTRABIT);
+			notbit = ~bit;
+			if (P1IN & RXD) val |= bit;
+			else val &= notbit;
+		}
+
+		delay(DELAY_STOPBIT);
+
+		return val;
+	}
+	return 0x53;
+}
+*/
+
+		
 
 #ifdef GCC
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
