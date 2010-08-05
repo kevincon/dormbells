@@ -3,6 +3,11 @@
  * Since Segment A cannot be overwritten, there are 192B available
  * tempo (int), pause & length (chars) are also stored in info mem
  * that leaves room for 94 notes to be stored.
+ * 
+ * Serial data taken via software UART at 2400baud.  Past 2 bytes
+ * some accuracy is lost, so safety measures are in place.  After
+ * two bytes are read data is limited to being 4 bits in size and
+ * 0xFF is used as an error flag.
  */
 
 #ifdef GCC
@@ -20,6 +25,8 @@
 
 #define			RXD										BIT2
 // DEFINES  ========================================
+#define SAFETY	// enable safety measures!
+
 #define SEGMENT_A (0x10FF)
 #define SEGMENT_B (0x10FF - 64)
 #define SEGMENT_C (0x10FF - 128)
@@ -31,17 +38,14 @@
 
 #define BAUD_RATE 2400
 #define BIT_PER		417		// 1,000,000 / BAUD_RATE = us delay
-#define BIT_PER3	139		// BIT_PER / 3
+#define BIT_PER3	142		// BIT_PER / 3 nee 139
 #define BIT_DEL		400 	// _bitPeriod - 17 nee clockCyclesToMicroseconds(50);
-#define BIT_DEL3	132 	// BIT_DEL / 3 133
+#define BIT_DEL3	132 	// BIT_DEL / 3 nee 133
 #define MAGIC			60		// delayMicroseconds(bitDelay / 2 - 20 nee clockCyclesToMicroseconds(50)) / 3
 
-#define DELAY_CENTERING	139
-#define DELAY_INTRABIT	59
-#define DELAY_STOPBIT		59	
 // GLOBALS  ========================================
-volatile unsigned char buffer[BUF_SIZE];
-volatile unsigned char i;
+volatile unsigned char buffer[BUF_SIZE];	// software UART buffer
+volatile unsigned char i;		// buffer position
 
 // FUNCTION PROTOTYPES =============================
 
@@ -74,15 +78,11 @@ int main(void)
 	erase_seg((char *)SEGMENT_C);
 	erase_seg((char *)SEGMENT_D);
 
-	/*
-	for (i = 0; i < BUF_SIZE; i++)
-		buffer[i] = read();
-		*/
-	i = 0;
-	__enable_interrupt();
-	while (!buffer[0]);
-	while (i < buffer[0]+2);
-	__disable_interrupt();
+	i = 0;		
+	__enable_interrupt();			// interrupt for software UART
+	while (!buffer[0]);				// wait to receive length data
+	while (i < buffer[0]+2);	// wait to get all song data
+	__disable_interrupt();		// no interrupts during flash write
 
 	// write constants to information memory (bottom of Segment D)
 	ptr = (unsigned char *)INFOMEM;
@@ -93,17 +93,12 @@ int main(void)
 	for (i = 0; i < LENGTH; i++)
 		write_byte(buffer[i+2], ptr++);
 
-	/*
-	for (i = 0; i < BUF_SIZE; i++)
-		buffer[i] = read();
-		*/
-
 	i = 0;
-	__enable_interrupt();
-	while (i < LENGTH + 2);
+	__enable_interrupt();		// read the last half of data
+	while (i < LENGTH + 2);	// wait for tempo & beats
 	__disable_interrupt();
 
-	// write constant to middle of available info mem
+	// write tempo to middle of available info mem
 	ptr = (unsigned char *)(INFOMEM + 192 / 2);
 	write_word((unsigned int *)buffer, (unsigned int *)ptr);
 	ptr += 2;
@@ -112,6 +107,7 @@ int main(void)
 	for (i = 0; i < LENGTH; i++)
 		write_byte(buffer[i+2], ptr++);
 
+	// we're done!
 	LED_OUT &= ~(LED0);
 	while(1);
 	return 0;
@@ -181,8 +177,6 @@ unsigned char read()
 {
 	unsigned char val = 0;
 
-	//while (P1IN & RXD);
-
 	// confirm that this is a real start bit, not line noise
 	if (!(P1IN & RXD)) {
 		unsigned char offset;
@@ -198,41 +192,14 @@ unsigned char read()
 			// read bit
 			val |= ((P1IN & RXD) > 0) << offset;
 		}
-
+		// delay for stop bit
 		delay(BIT_PER3);
 
 		return val;
 	}
-
-	return 0x53;
+	// didn't get data
+	return 0xFF;
 }
-
-/*
-unsigned char read()
-{
-	unsigned char val = 0;
-
-	if (!(P1IN & RXD)) {
-		unsigned char bit, notbit;
-
-		delay(DELAY_CENTERING);
-
-		for (bit = 1; bit; bit <<= 1) {
-			delay(DELAY_INTRABIT);
-			notbit = ~bit;
-			if (P1IN & RXD) val |= bit;
-			else val &= notbit;
-		}
-
-		delay(DELAY_STOPBIT);
-
-		return val;
-	}
-	return 0x53;
-}
-*/
-
-		
 
 #ifdef GCC
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
@@ -241,10 +208,21 @@ interrupt(PORT1_VECTOR) PORT1_ISR(void)
 __interrupt void PORT1_ISR(void)
 #endif
 {
-	LED_OUT |= LED1;
+#ifdef SAFETY
+	unsigned char temp;
+#endif
 	P1IE &= ~(RXD);				// disable interrupt
 	P1IFG &= ~(RXD);			// clear interrupt flag
+#ifdef SAFETY
+	temp = read();
+	if (temp != 0xFF) {		// don't store in buffer if error
+		// since serial goes LSB->MSB, MSB are sometimes wrong
+		// because of timing. let's get rid of them
+		if (i > 2) temp &= 0x0F;	
+		buffer[i++] = temp;
+	}
+#else
 	buffer[i++] = read();	// read data
+#endif
 	P1IE |= RXD;					// enable interrupt
-	LED_OUT &= ~(LED1);
 }

@@ -37,35 +37,31 @@
 // Start by defining the relationship between 
 //       note, period, and frequency.
 // This is calculated by finding the number of SMCLK
-// 		 ticks (32,768 Hz) needed to make up twice the
+// 		 ticks (1,048,576 Hz) needed to make up twice the
 //       frequency of each tone. (Ex: for A, which is
 //       440 Hz, find the # of SMCLK ticks needed to
-//       create a frequency of 880 Hz = ~37. 
-#define  c     63		// 261 Hz 
-#define  d     56		// 294 Hz 
-#define  e     50   // 329 Hz 
-#define  f     47   // 349 Hz 
-#define  g     42   // 392 Hz 
-#define  a     37   // 440 Hz 
-#define  b     33   // 493 Hz 
-// Define a special note, 'R', to represent a rest
-#define  R     0
+//       create a frequency of 880 Hz = ~1192. 
+// D major scale: R,D,E,F#,G,A,B,C#,D (294 Hz - 587 Hz)
+unsigned const int notes[] = {
+	0, 56, 50, 44, 42, 37, 33, 30, 28
+};
+
 
 // MELODY and TIMING  =======================================
 //  melody[] is an array of notes, accompanied by beats[], 
 //  which sets each note's relative length (higher #, longer note) 
-char *melody;
-char *beats;
-char length;  // Melody length, for looping.
+unsigned char *melody;
+unsigned char *beats;
+unsigned char length;  // Melody length, for looping.
 
 //tempo in SMCLK ticks per beat
 unsigned int tempo; 
 // Set length of pause between notes
-char pause; // ~1 ms
+unsigned char pause; // ~1 ms
 
 // excuse the strong language, but fuck you GCC optimizations
 // the missing volatile messed with my head for an hour
-volatile char tone = 0; 							// current tone
+volatile unsigned int tone = 0; 			// current tone
 volatile unsigned int duration = 0;		// current duration
 
 // OTHER DECLARATIONS  =======================================
@@ -94,7 +90,7 @@ int main(void)
 	init_consts();
 
 	//Checksum...sorta
-	if (tempo != 11633 || pause != 33 || length != 14) {
+	if (tempo != 11633 || pause != 33 || length != 50) {
 		PWM_SEL &= ~(PWM);
 		LED_OUT |= LED0 + LED1;
 	}
@@ -108,7 +104,7 @@ void init_clocks(void)
 {
 	BCSCTL1 = CALBC1_1MHZ;	// Set range for DCO
 	DCOCTL = CALDCO_1MHZ;		// Calibrate DCO
-	BCSCTL2 |= DIVS_3;			// SMCLK = MCLK/8 = 131072Hz
+	BCSCTL2 |= DIVS_3;			// SMCLK = MCLK/8 = 131,072 Hz
 }
 
 void init_button(void)		// Configure Push Button 
@@ -141,11 +137,11 @@ void init_consts(void)
 {
 	//	Example: Happy Birthday!
 	// { g, g, a, g, c, b, R, g, g, a, g, d, c, R }
-	melody = (char *)(INFOMEM + 2);
+	melody = (unsigned char *)(INFOMEM + 2);
 	// { 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1 } 
-	beats = (char *)(INFOMEM + 192/2 + 2);
-	length = *(char *)(INFOMEM);  
-	pause = *(char *)(INFOMEM + 1); // 33, ~1 ms
+	beats = (unsigned char *)(INFOMEM + 192/2 + 2);
+	length = *(unsigned char *)(INFOMEM);  
+	pause = *(unsigned char *)(INFOMEM + 1); // 33, ~1 ms
 	tempo = *(unsigned int *)(INFOMEM + 192/2); // ~169 BPM, which sounded about right for Happy Birthday
 }
 	
@@ -160,12 +156,12 @@ void play_song(void)
 #endif
 
 	for (i = 0; i < length; i++) {
-		tone = melody[i];
+		tone = notes[melody[i]];
 		duration = beats[i] * tempo;
 		
 		play_tone(); 
 		// A pause between notes...
-		tone = R;
+		tone = 0;
 		duration = pause;
 		play_tone();
 	}
@@ -186,7 +182,7 @@ void play_tone(void)
 		PWM_DIR &= ~(PWM);
 	}
 	TACCR0 = duration;
-	TACTL |= ID_2 + MC_2;	// set clock divider, continuous mode, should start timer
+	TACTL |= MC_2 + ID_2;	// SMCLK/4, continuous mode, should start timer
 	while(TACTL & MC_2);	// wait for timer to stop (tone is done playing)
 }
 

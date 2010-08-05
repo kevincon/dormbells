@@ -1,7 +1,7 @@
 package com.dormbells.writer;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -31,22 +31,34 @@ public class Writer {
 
 	private static final int BAUD_RATE = 2400;				// communication speed (baud)
 	private static final boolean DEBUG = true;
-	private static final int DELAY = 2;
 
 	// Data stream from serial communication
-	private BufferedOutputStream out;
+	private OutputStream out;
 
 	// Data to transmit
 	private int pause = 33;
-	//private int tempo = 11633;
-	private int tempo = 9;
-	/*
-	private Tone[] tones = { Tone.G, Tone.G, Tone.A, Tone.G, Tone.C, 
-			Tone.B, Tone.R, Tone.G, Tone.G, Tone.A, Tone.G, Tone.D, Tone.C, Tone.R };	// Java, your verbosity is painful sometimes
-			*/
-	private Tone[] tones = { Tone.A, Tone.A, Tone.A, Tone.A, Tone.A };
-	private int[] beats = { 1, 1, 1, 1, 1 };
-	//private int[] beats = { 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1 };
+	private int tempo = 11633;	
+	 
+	// The Can-Can in D major, one of my favorites from middle school orchestra
+	// btw, Java, your verbosity is painful sometimes
+	private Tone[] tones = {	
+			Tone.D, Tone.D, Tone.E, Tone.G, Tone.F, Tone.E, Tone.A, Tone.A,
+			Tone.A, Tone.B, Tone.F, Tone.G, Tone.E, Tone.E, Tone.E, Tone.G,
+			Tone.F, Tone.E, Tone.D, Tone.d, Tone.C, Tone.B, Tone.A, Tone.G,
+			Tone.F, Tone.E, Tone.D, Tone.D, Tone.E, Tone.G, Tone.F, Tone.E,
+			Tone.A, Tone.A, Tone.A, Tone.B, Tone.F, Tone.G, Tone.E, Tone.E,
+			Tone.E, Tone.G, Tone.F, Tone.E, Tone.D, Tone.A, Tone.E, Tone.F,
+			Tone.D, Tone.D
+			};
+	private int[] beats = { 
+			2, 2, 1, 1, 1, 1, 2, 2,
+			1, 1, 1, 1, 2, 2, 1, 1,
+			1, 1, 2, 1, 1, 1, 1, 1,
+			1, 1, 2, 2, 1, 1, 1, 1,
+			2, 2, 1, 1, 1, 1, 2, 2, 
+			1, 1, 1, 1, 1, 1, 1, 1,
+			2, 2
+	};
 
 	/**
 	 * Initializes serial communication and data streams.
@@ -63,68 +75,54 @@ public class Writer {
 		SerialPort sp = (SerialPort) commPort;
 		sp.setSerialPortParams(BAUD_RATE,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
 
-		out = new BufferedOutputStream(sp.getOutputStream(), 1);
+		out = sp.getOutputStream();
 	}
 
 	/**
 	 * Send an 8-bit integer over the serial line.  Only the 8 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.
 	 * @throws IOException
-	 * @throws InterruptedException 
 	 */
-	private void writeByte(int num) throws IOException, InterruptedException {
+	private void writeByte(int num) throws IOException {
 		out.write(num);
-		Thread.sleep(DELAY);
 	}
 
 	/**
 	 * Send a 16-bit integer over the serial line.  Only the 16 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.
 	 * @throws IOException
-	 * @throws InterruptedException 
 	 */
-	private void writeInt(int num) throws IOException, InterruptedException {
+	private void writeInt(int num) throws IOException {
 		// since all Java variables are signed and 
 		// locals take 32-bits in JVM, might as well use ints
 		int LSB = num & 0xFF;
 		int MSB = (num >> 8) & 0xFF;
 		if (DEBUG) System.err.printf("LSB: %x\tMSB: %x\n", LSB, MSB);
-		out.write(MSB);
-		Thread.sleep(DELAY);
+		// MSP430 is little endian
 		out.write(LSB);
-		Thread.sleep(DELAY);
+		out.write(MSB);
 	}
 
 	/**
 	 * Send the array of beats over the serial line.  As usual, all 24 higher bits are discarded.
 	 * @param arr array of beats to send
 	 * @throws IOException
-	 * @throws InterruptedException 
 	 */
-	private void writeArray(int[] arr) throws IOException, InterruptedException {
-		byte[] bytes = new byte[arr.length];
+	private void writeArray(int[] arr) throws IOException {
 		for (int i = 0; i < arr.length; i++) {
-			bytes[i] = (byte) arr[i];
-			out.write(bytes[i]);
-			Thread.sleep(DELAY);
+			out.write((byte) arr[i]);
 		}
-		//out.write(bytes);
 	}
 
 	/**
 	 * Sends an array of tone frequencies over the serial line.  Frequencies are defined in the Tone Enum.
 	 * @param tones array of tones to send
 	 * @throws IOException
-	 * @throws InterruptedException 
 	 */
-	private void writeArray(Tone[] tones) throws IOException, InterruptedException {
-		byte[] bytes = new byte[tones.length];
+	private void writeArray(Tone[] tones) throws IOException {
 		for (int i = 0; i < tones.length; i++) {
-			bytes[i] = (byte) tones[i].freq;
-			out.write(bytes[i]);
-			Thread.sleep(DELAY);
+			out.write((byte) tones[i].freq);
 		}
-		//out.write(bytes);
 	}
 
 	/**
