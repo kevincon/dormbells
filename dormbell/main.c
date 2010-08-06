@@ -92,11 +92,6 @@ int main(void)
 	init_pwm();
 	init_consts();
 
-	//Checksum...sorta
-	if (tempo != 11633 || pause != 33 || length != 50) {
-		PWM_SEL &= ~(PWM);
-		LED_OUT |= LED0 + LED1;
-	}
 	__bis_SR_register(LPM1_bits + GIE);     // LPM1 with interrupts enabled
 
 	while(1);

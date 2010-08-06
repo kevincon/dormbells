@@ -3,8 +3,11 @@ package com.dormbells.writer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Scanner;
+import java.util.regex.Pattern;
 
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
@@ -30,7 +33,9 @@ public class Writer {
 	}
 
 	private static final int BAUD_RATE = 2400;				// communication speed (baud)
-	private static final boolean DEBUG = false;
+	private static final int MAX_NUM_NOTES = 94;
+	private static final float TIMER_CLOCK = 32768.0f;
+	private static final boolean DEBUG = true;
 
 	// Data stream from serial communication
 	private OutputStream out;
@@ -79,6 +84,96 @@ public class Writer {
 	}
 
 	/**
+	 * Parses a string of note names for serial transmission.
+	 * @param notes a comma-separated string of notes, e.g. "A, B, C"
+	 */
+	public void setTones (String notes) {
+		ArrayList<Tone> newTones = new ArrayList<Tone>();
+		Scanner scanner = new Scanner(notes);
+		scanner.useDelimiter(Pattern.compile(",\\s?"));
+		while (scanner.hasNext()) {
+			String note = scanner.next();
+			try {
+				newTones.add(Tone.valueOf(note));
+			} catch (IllegalArgumentException e) {
+				System.err.println("Sorry, the note \'" + note + "\' is not accepted.");
+				System.err.println("Input is invalid, exiting.");
+				System.exit(-3);
+			}
+			if (tooManyNotes(newTones)) break;
+		}
+		tones = newTones.toArray(new Tone[0]);
+		if (DEBUG) System.out.println("Tones: " + Arrays.toString(tones));
+	}
+	
+	/**
+	 * Parses a string of integer beat counts that match up with the notes.
+	 * @param counts a comma-separated string of beats, e.g. "1, 1, 2, 1"
+	 */
+	public void setBeats (String counts) {
+		ArrayList<Integer> newBeats = new ArrayList<Integer>();
+		Scanner scanner = new Scanner(counts);
+		scanner.useDelimiter(Pattern.compile(",\\s?"));
+		while (scanner.hasNextInt()) {
+			int beat = scanner.nextInt();
+			newBeats.add(beat);
+			if (tooManyNotes(newBeats)) break;
+		}
+		beats = new int[newBeats.size()];
+		for (int i = 0; i < newBeats.size(); i++)
+			beats[i] = newBeats.get(i);
+		if (DEBUG) System.out.println("Beats: " + Arrays.toString(beats));
+	}
+	
+	/**
+	 * Check if given notes are greater than Dorm Bell can allow
+	 * @param list tone or beat data accrued so far
+	 * @return whether this list is too big
+	 */
+	private boolean tooManyNotes(List<?> list) {
+		if (list.size() > MAX_NUM_NOTES) {
+			System.err.println("Sorry, the Dorm Bell can only hold 94 notes.");
+			System.err.println("Going to transmit the first 94 given.");
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Sets the pause in between the notes as given by the input string.
+	 * @param input a string containing only an integer of the pause amount in milliseconds.
+	 */
+	public void setPause(String input) {
+		String s = input.trim();
+		try {
+			pause = Math.round(TIMER_CLOCK / (Integer.parseInt(s) * 1000));
+		}
+		catch (NumberFormatException e) {
+			System.err.println("Sorry, the value given for the pause, \'" + s + "\', cannot be parsed");
+			System.err.println("Input is invalid, exiting.");
+			System.exit(-3);
+		}
+		if (DEBUG) System.out.println("Pause: " + pause);
+	}
+	
+	/**
+	 * Sets the tempo as given by the input string.
+	 * @param input a string containing only an integer of the tempo in beats per minute.
+	 */
+	public void setTempo(String input) {
+		String s = input.trim();
+		try {
+			tempo = Math.round(TIMER_CLOCK * 60 / Integer.parseInt(s));
+		}
+		catch (NumberFormatException e) {
+			System.err.println("Sorry, the value given for the tempo, \'" + s + "\', cannot be parsed");
+			System.err.println("Input is invalid, exiting.");
+			System.exit(-3);
+		}
+		if (DEBUG) System.out.println("Tempo: " + tempo);
+	}
+	
+	/**
 	 * Send an 8-bit integer over the serial line.  Only the 8 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.
 	 * @throws IOException
@@ -97,7 +192,6 @@ public class Writer {
 		// locals take 32-bits in JVM, might as well use ints
 		int LSB = num & 0xFF;
 		int MSB = (num >> 8) & 0xFF;
-		if (DEBUG) System.err.printf("LSB: %x\tMSB: %x\n", LSB, MSB);
 		// MSP430 is little endian
 		out.write(LSB);
 		out.write(MSB);
@@ -130,21 +224,20 @@ public class Writer {
 	 * so as to not overflow its buffer.
 	 */
 	void send() {
+		if (tones.length != beats.length) {
+			System.err.println("Sorry, you have " + tones.length + " tones and " + beats.length + " beats.");
+			System.err.println("These numbers should be equal.");
+			System.err.println("Exiting.");
+			System.exit(-3);
+		}
 		try {
-			if (DEBUG) System.err.println("Debug: Writing length");
 			writeByte(tones.length);
-			if (DEBUG) System.err.println("Debug: Writing pause");
 			writeByte(pause);
-			if (DEBUG) System.err.println("Debug: Writing tones");
 			writeArray(tones);
-			if (DEBUG) System.err.println("Debug: Flushing");
 			out.flush();
 			Thread.sleep(40);	// wait for MSP430 to write to flash
-			if (DEBUG) System.err.println("Debug: Writing tempo");
 			writeInt(tempo);
-			if (DEBUG) System.err.println("Debug: Writing beats");
 			writeArray(beats);
-			if (DEBUG) System.err.println("Debug: Flushing");
 			out.flush();
 		}
 		catch (IOException e) {
@@ -251,7 +344,7 @@ public class Writer {
 		String[] opts = optParse(commPorts, args);
 		Mode mode = Mode.valueOf(opts[0]);
 		String commPort = opts[1];
-		//String input = opts[2];
+		String input = opts[2];
 
 		try {
 			w = new Writer(commPort);
@@ -260,6 +353,10 @@ public class Writer {
 			System.exit(-1);
 		}
 		if (mode == Mode.Internal) {
+			w.send();
+		}
+		else if (mode == Mode.File) {
+			new FileParser(w, input);	// parse input file
 			w.send();
 		}
 		w.exit();
