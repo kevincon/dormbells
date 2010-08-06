@@ -1,4 +1,5 @@
 #define DEBUG
+
 #ifdef GCC
 #include <io.h>
 #include <signal.h>
@@ -37,14 +38,16 @@
 // Start by defining the relationship between 
 //       note, period, and frequency.
 // This is calculated by finding the number of SMCLK
-// 		 ticks (1,048,576 Hz) needed to make up twice the
+// 		 ticks (32,768 Hz) needed to make up twice the
 //       frequency of each tone. (Ex: for A, which is
 //       440 Hz, find the # of SMCLK ticks needed to
-//       create a frequency of 880 Hz = ~1192. 
+//       create a frequency of 880 Hz = ~37. 
 // D major scale: R,D,E,F#,G,A,B,C#,D (294 Hz - 587 Hz)
+#ifdef SAFETY
 unsigned const int notes[] = {
 	0, 56, 50, 44, 42, 37, 33, 30, 28
 };
+#endif
 
 
 // MELODY and TIMING  =======================================
@@ -156,7 +159,11 @@ void play_song(void)
 #endif
 
 	for (i = 0; i < length; i++) {
+#ifdef SAFETY
 		tone = notes[melody[i]];
+#else
+		tone = melody[i];
+#endif
 		duration = beats[i] * tempo;
 		
 		play_tone(); 

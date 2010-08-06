@@ -4,10 +4,10 @@
  * tempo (int), pause & length (chars) are also stored in info mem
  * that leaves room for 94 notes to be stored.
  * 
- * Serial data taken via software UART at 2400baud.  Past 2 bytes
- * some accuracy is lost, so safety measures are in place.  After
- * two bytes are read data is limited to being 4 bits in size and
- * 0xFF is used as an error flag.
+ * Serial data taken via software UART at 2400 baud. Right now it
+ * seems to run just a tad too quickly, so error bytes 0xFF are
+ * skipped over as a safety measure.  No problems when testing with
+ * the Can-Can.
  */
 
 #ifdef GCC
@@ -25,7 +25,7 @@
 
 #define			RXD										BIT2
 // DEFINES  ========================================
-#define SAFETY	// enable safety measures!
+#define SAFETY
 
 #define SEGMENT_A (0x10FF)
 #define SEGMENT_B (0x10FF - 64)
@@ -37,11 +37,16 @@
 #define LENGTH		(*(unsigned char *)(INFOMEM))	// where length is written
 
 #define BAUD_RATE 2400
-#define BIT_PER		417		// 1,000,000 / BAUD_RATE = us delay
-#define BIT_PER3	142		// BIT_PER / 3 nee 139
-#define BIT_DEL		400 	// _bitPeriod - 17 nee clockCyclesToMicroseconds(50);
-#define BIT_DEL3	132 	// BIT_DEL / 3 nee 133
-#define MAGIC			60		// delayMicroseconds(bitDelay / 2 - 20 nee clockCyclesToMicroseconds(50)) / 3
+#define DELAY_CENTER 190	// 54 start bit center + 136 to jump to LSB center
+#define DELAY_INTRA	134
+#define DELAY_STOP	56	// nee 58
+
+/*
+#define BAUD_RATE 1200
+#define DELAY_CENTER 398 	// nee 124 start bit center+275 to jump to LSB center
+#define DELAY_INTRA	267	// nee 272
+#define DELAY_STOP	132		// nee 127
+*/
 
 // GLOBALS  ========================================
 volatile unsigned char buffer[BUF_SIZE];	// software UART buffer
@@ -162,7 +167,7 @@ void write_word(unsigned int *data, unsigned int *ptr)
 }
 
 // Delay Routine from mspgcc help file
-// I think this delays n/3 us -Varun
+// Takes 3 clock cycles to execute 1 iteration
 static void __inline__ delay(register unsigned int n)
 {
 	__asm__ __volatile__ (
@@ -172,28 +177,30 @@ static void __inline__ delay(register unsigned int n)
 			: [n] "+r"(n));
 }
 
-// code ported/borrowed from David Mellis's SoftwareSerial for Arduino
+// ideas borrowed from David Mellis's SoftwareSerial 
+// and Mikal Hart's NewSoftSerial for Arduino
 unsigned char read()
 {
 	unsigned char val = 0;
 
-	// confirm that this is a real start bit, not line noise
+	// make sure line has gone low (we're on a start bit)
 	if (!(P1IN & RXD)) {
-		unsigned char offset;
-		// frame start indicated by a falling edge and low start bit
-		// jump to the middle of the low start bit
-		delay(MAGIC);
+		unsigned char bit;
+		// jump to middle of first data bit
+		delay(DELAY_CENTER);
 
-		// offset of the bit in the byte: from 0 (LSB) to 7 (MSB)
-		for (offset = 0; offset < 8; offset++) {
-			// jump to middle of next bit
-			delay(BIT_DEL3);
+		// bit to potentially write: goes from 0 (LSB) to 7 (MSB)
+		for (bit = 1; bit; bit <<= 1) {
 
 			// read bit
-			val |= ((P1IN & RXD) > 0) << offset;
+			if (P1IN & RXD)
+				val |= bit;
+
+			// jump to middle of next bit
+			delay(DELAY_INTRA);
 		}
 		// delay for stop bit
-		delay(BIT_PER3);
+		delay(DELAY_STOP);
 
 		return val;
 	}
@@ -216,9 +223,6 @@ __interrupt void PORT1_ISR(void)
 #ifdef SAFETY
 	temp = read();
 	if (temp != 0xFF) {		// don't store in buffer if error
-		// since serial goes LSB->MSB, MSB are sometimes wrong
-		// because of timing. let's get rid of them
-		if (i > 2) temp &= 0x0F;	
 		buffer[i++] = temp;
 	}
 #else

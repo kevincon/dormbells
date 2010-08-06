@@ -30,7 +30,7 @@ public class Writer {
 	}
 
 	private static final int BAUD_RATE = 2400;				// communication speed (baud)
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 
 	// Data stream from serial communication
 	private OutputStream out;
@@ -48,7 +48,7 @@ public class Writer {
 			Tone.F, Tone.E, Tone.D, Tone.D, Tone.E, Tone.G, Tone.F, Tone.E,
 			Tone.A, Tone.A, Tone.A, Tone.B, Tone.F, Tone.G, Tone.E, Tone.E,
 			Tone.E, Tone.G, Tone.F, Tone.E, Tone.D, Tone.A, Tone.E, Tone.F,
-			Tone.D, Tone.D
+			Tone.D, Tone.D,
 			};
 	private int[] beats = { 
 			2, 2, 1, 1, 1, 1, 2, 2,
@@ -57,7 +57,7 @@ public class Writer {
 			1, 1, 2, 2, 1, 1, 1, 1,
 			2, 2, 1, 1, 1, 1, 2, 2, 
 			1, 1, 1, 1, 1, 1, 1, 1,
-			2, 2
+			2, 2,
 	};
 
 	/**
@@ -139,7 +139,7 @@ public class Writer {
 			writeArray(tones);
 			if (DEBUG) System.err.println("Debug: Flushing");
 			out.flush();
-			Thread.sleep(500);	// wait for MSP430 to write to flash
+			Thread.sleep(40);	// wait for MSP430 to write to flash
 			if (DEBUG) System.err.println("Debug: Writing tempo");
 			writeInt(tempo);
 			if (DEBUG) System.err.println("Debug: Writing beats");
