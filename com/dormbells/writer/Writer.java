@@ -1,13 +1,11 @@
 package com.dormbells.writer;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Scanner;
-import java.util.regex.Pattern;
+import java.util.*;
+
+import org.xml.sax.SAXException;
 
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
@@ -26,44 +24,27 @@ import gnu.io.UnsupportedCommOperationException;
  */
 public class Writer {
 
-	private enum Mode {
-		GUI,
-		File,
-		Internal;
+	private enum Error  {
+		INVALID_FILE,
+		INVALID_INPUT,
+		SYSTEM_ERROR;
 	}
-
+	
 	private static final int BAUD_RATE = 2400;				// communication speed (baud)
+    /** MSP430 Timer clock in Hz */
+	public static final int CLOCK_FREQ = 32768;
 	private static final int MAX_NUM_NOTES = 94;
-	private static final float TIMER_CLOCK = 32768.0f;
 	private static final boolean DEBUG = true;
 
 	// Data stream from serial communication
 	private OutputStream out;
 
+	private Set<Tone> availableTones;		// available tones to use
+	
 	// Data to transmit
-	private int pause = 33;
-	private int tempo = 11633;	
-	 
-	// The Can-Can in D major, one of my favorites from middle school orchestra
-	// btw, Java, your verbosity is painful sometimes
-	private Tone[] tones = {	
-			Tone.D, Tone.D, Tone.E, Tone.G, Tone.F, Tone.E, Tone.A, Tone.A,
-			Tone.A, Tone.B, Tone.F, Tone.G, Tone.E, Tone.E, Tone.E, Tone.G,
-			Tone.F, Tone.E, Tone.D, Tone.d, Tone.C, Tone.B, Tone.A, Tone.G,
-			Tone.F, Tone.E, Tone.D, Tone.D, Tone.E, Tone.G, Tone.F, Tone.E,
-			Tone.A, Tone.A, Tone.A, Tone.B, Tone.F, Tone.G, Tone.E, Tone.E,
-			Tone.E, Tone.G, Tone.F, Tone.E, Tone.D, Tone.A, Tone.E, Tone.F,
-			Tone.D, Tone.D,
-			};
-	private int[] beats = { 
-			2, 2, 1, 1, 1, 1, 2, 2,
-			1, 1, 1, 1, 2, 2, 1, 1,
-			1, 1, 2, 1, 1, 1, 1, 1,
-			1, 1, 2, 2, 1, 1, 1, 1,
-			2, 2, 1, 1, 1, 1, 2, 2, 
-			1, 1, 1, 1, 1, 1, 1, 1,
-			2, 2,
-	};
+	private List<Note> song;		
+	private int pause;
+	private int tempo;	
 
 	/**
 	 * Initializes serial communication and data streams.
@@ -81,96 +62,102 @@ public class Writer {
 		sp.setSerialPortParams(BAUD_RATE,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
 
 		out = sp.getOutputStream();
+		availableTones = new HashSet<Tone>();
+		song = new ArrayList<Note>();
 	}
 
 	/**
-	 * Parses a string of note names for serial transmission.
-	 * @param notes a comma-separated string of notes, e.g. "A, B, C"
+	 * Add new tone to the set of available tones a song can use.
+	 * If the tone is already in the set, the program will fail and exit.
+	 * @param tone the tone to add
 	 */
-	public void setTones (String notes) {
-		ArrayList<Tone> newTones = new ArrayList<Tone>();
-		Scanner scanner = new Scanner(notes);
-		scanner.useDelimiter(Pattern.compile(",\\s?"));
-		while (scanner.hasNext()) {
-			String note = scanner.next();
-			try {
-				newTones.add(Tone.valueOf(note));
-			} catch (IllegalArgumentException e) {
-				System.err.println("Sorry, the note \'" + note + "\' is not accepted.");
-				System.err.println("Input is invalid, exiting.");
-				System.exit(-3);
+	public void addTone(Tone tone) {
+		if (!availableTones.add(tone)) {
+			System.err.println("A definition for the tone " + tone.getName() + 
+			" already exists. Parse error, exiting");
+			System.exit(Error.INVALID_INPUT.ordinal());
+		}
+	}
+	
+	/**
+	 * Adds a new note to the song.  Will not add the note if max number of notes
+	 * are present in the song.  Will exit if the note is not one of the available tones.
+	 * @param note the note to add
+	 */
+	public void addNote(Note note) {
+		if (song.size() == MAX_NUM_NOTES) {
+			System.err.println("Sorry, already " + MAX_NUM_NOTES + " notes" +
+			" have been given. No more will be accepted.");
+		}
+		else {
+			for (Tone t : availableTones) {
+				if (t.getName().equals(note.getToneName())) {
+					note.setTone(t);
+					break;
+				}
 			}
-			if (tooManyNotes(newTones)) break;
+			if (note.getTone() == null) {
+				System.err.println("Invalid note " + note.getToneName() + 
+				" has been given.  Exiting");
+				System.exit(Error.INVALID_INPUT.ordinal());
+			}
+			song.add(note);
 		}
-		tones = newTones.toArray(new Tone[0]);
-		if (DEBUG) System.out.println("Tones: " + Arrays.toString(tones));
+	}
+
+	/**
+	 * Sets the pause in between the notes in clock ticks
+	 * @param pause the pause in milliseconds
+	 */
+	public void setPause(int pause) {
+		this.pause = Math.round((float)CLOCK_FREQ / (pause * 1000));
+		if (DEBUG) System.out.println("Pause: " + this.pause);
 	}
 	
 	/**
-	 * Parses a string of integer beat counts that match up with the notes.
-	 * @param counts a comma-separated string of beats, e.g. "1, 1, 2, 1"
+	 * Sets the tempo in clock ticks
+	 * @param tempo the tempo in beats per minute
 	 */
-	public void setBeats (String counts) {
-		ArrayList<Integer> newBeats = new ArrayList<Integer>();
-		Scanner scanner = new Scanner(counts);
-		scanner.useDelimiter(Pattern.compile(",\\s?"));
-		while (scanner.hasNextInt()) {
-			int beat = scanner.nextInt();
-			newBeats.add(beat);
-			if (tooManyNotes(newBeats)) break;
-		}
-		beats = new int[newBeats.size()];
-		for (int i = 0; i < newBeats.size(); i++)
-			beats[i] = newBeats.get(i);
-		if (DEBUG) System.out.println("Beats: " + Arrays.toString(beats));
+	public void setTempo(int tempo) {
+		this.tempo = Math.round((float)CLOCK_FREQ * 60 / tempo);
+		if (DEBUG) System.out.println("Tempo: " + this.tempo);
 	}
 	
 	/**
-	 * Check if given notes are greater than Dorm Bell can allow
-	 * @param list tone or beat data accrued so far
-	 * @return whether this list is too big
+	 * Get the tick values into an integer array for sending
+	 * @return the tick values
 	 */
-	private boolean tooManyNotes(List<?> list) {
-		if (list.size() > MAX_NUM_NOTES) {
-			System.err.println("Sorry, the Dorm Bell can only hold 94 notes.");
-			System.err.println("Going to transmit the first 94 given.");
-			return true;
+	private int[] getNotesTones() {
+		int[] tones = new int[song.size()];
+		if (DEBUG) System.out.print("Tones: [");
+		for (int i = 0; i < tones.length; i++) {
+			tones[i] = song.get(i).getTone().getTicks();
+			if (DEBUG) {
+				System.out.print(song.get(i).getToneName());
+				if (i != tones.length-1) System.out.print(", ");
+			}
 		}
-		return false;
+		if (DEBUG) System.out.println("]");
+		return tones;
 	}
 	
 	/**
-	 * Sets the pause in between the notes as given by the input string.
-	 * @param input a string containing only an integer of the pause amount in milliseconds.
+	 * Get the beat values into an integer array for sending
+	 * @return the beat values
 	 */
-	public void setPause(String input) {
-		String s = input.trim();
-		try {
-			pause = Math.round(TIMER_CLOCK / (Integer.parseInt(s) * 1000));
+	private int[] getNotesBeats() {
+		int[] beats = new int[song.size()];
+		if (DEBUG) System.out.print("Beats: [");
+		for (int i = 0; i < beats.length; i++) {
+			beats[i] = song.get(i).getBeats();
+			if (DEBUG) {
+				System.out.print(beats[i]);
+				if (song.get(i).getToneName().length() > 1) System.out.print(" ");
+				if (i != beats.length-1) System.out.print(", ");
+			}
 		}
-		catch (NumberFormatException e) {
-			System.err.println("Sorry, the value given for the pause, \'" + s + "\', cannot be parsed");
-			System.err.println("Input is invalid, exiting.");
-			System.exit(-3);
-		}
-		if (DEBUG) System.out.println("Pause: " + pause);
-	}
-	
-	/**
-	 * Sets the tempo as given by the input string.
-	 * @param input a string containing only an integer of the tempo in beats per minute.
-	 */
-	public void setTempo(String input) {
-		String s = input.trim();
-		try {
-			tempo = Math.round(TIMER_CLOCK * 60 / Integer.parseInt(s));
-		}
-		catch (NumberFormatException e) {
-			System.err.println("Sorry, the value given for the tempo, \'" + s + "\', cannot be parsed");
-			System.err.println("Input is invalid, exiting.");
-			System.exit(-3);
-		}
-		if (DEBUG) System.out.println("Tempo: " + tempo);
+		if (DEBUG) System.out.println("]");
+		return beats;
 	}
 	
 	/**
@@ -209,41 +196,24 @@ public class Writer {
 	}
 
 	/**
-	 * Sends an array of tone frequencies over the serial line.  Frequencies are defined in the Tone Enum.
-	 * @param tones array of tones to send
-	 * @throws IOException
-	 */
-	private void writeArray(Tone[] tones) throws IOException {
-		for (int i = 0; i < tones.length; i++) {
-			out.write((byte) tones[i].freq);
-		}
-	}
-
-	/**
-	 * Sends data over the serial line in the appropriate order.  Waits for MSP430 acknowledgment
-	 * so as to not overflow its buffer.
+	 * Sends data over the serial line in the appropriate order.
 	 */
 	void send() {
-		if (tones.length != beats.length) {
-			System.err.println("Sorry, you have " + tones.length + " tones and " + beats.length + " beats.");
-			System.err.println("These numbers should be equal.");
-			System.err.println("Exiting.");
-			System.exit(-3);
-		}
 		try {
-			writeByte(tones.length);
+			writeByte(song.size());
 			writeByte(pause);
-			writeArray(tones);
+			writeArray(getNotesTones());
 			out.flush();
 			Thread.sleep(40);	// wait for MSP430 to write to flash
 			writeInt(tempo);
-			writeArray(beats);
+			writeArray(getNotesBeats());
 			out.flush();
 		}
 		catch (IOException e) {
 			e.printStackTrace();
-			System.exit(-1);
+			System.exit(Error.SYSTEM_ERROR.ordinal());
 		} catch (InterruptedException e) { }
+		if (DEBUG) System.out.println("Done sending.");
 	}
 	
 	/**
@@ -257,55 +227,44 @@ public class Writer {
 		}
 		System.exit(0);
 	}
+	
 
 	/**
-	 * Usage cases:
-	 * no arguments will invoke GUI (not implemented)
-	 * if arguments given, one must be comm port
-	 * -f take file input for song data (pass filename as next argument) (not implemented)
-	 * if no -f, internal mode is assumed
+	 * one argument must be comm port
+	 * must give -f: take file input for song data (pass filename as next argument)
 	 * 
 	 * @param commPorts list of communication ports
 	 * @param args command-line arguments
-	 * @return options data for main() to interpret.  [0] is Mode, [1] is comm port, 
-	 * and [2] is additional arg if any
+	 * @return options data for main() to interpret.  [0] is comm port, 
+	 * and [1] is input file
 	 */
 	private static String[] optParse(List<String> commPorts, String args[]) {
 		String commPort = null;
 		boolean validComm = true;
-		String[] returnVal = new String[3];
-		if (args.length == 0) {
-			// since this is GUI invocation, will have drop down box option
-			returnVal[0] = "GUI";
+		String[] returnVal = new String[2];
+		if (args.length != 3) {
+			System.err.println("comm port and input file are required arguments");
+			System.exit(Error.INVALID_INPUT.ordinal());
 		} 
-		else if (args.length == 1) {
-			// only argument must be comm port, assume internal mode
-			commPort = args[0];
-		} 
-		else {
-			// search for comm port argument.  It can't have a '-' prefix nor be the argument to a '-f'
-			int i = 0;
-			while (i < args.length && commPort == null) {
-				if ((args[i].charAt(0) != '-') && ((i > 0 && !args[i-1].equals("-f")) || i == 0))
-					commPort = args[i];
-				i++;
-			}
-			validComm = !(i == args.length && commPort == null);
-			if (validComm) {
-				// check for '-f' option (file input)
-				for (i = 0; i < args.length; i++) {
-					if (args[i].equals("-f")) {
-						if ((i+1) < args.length) {
-							returnVal[0] = "File";
-							returnVal[2] = args[i+1];
-							break;
-						}
-						else {
-							System.err.println("No input file given, exiting");
-							System.exit(-2);
-						}
-					}
+		// search for comm port argument.  It can't have a '-' prefix nor be the argument to a '-f'
+		int i = 0;
+		while (i < args.length && commPort == null) {
+			if ((args[i].charAt(0) != '-') && ((i > 0 && !args[i-1].equals("-f")) || i == 0))
+				commPort = args[i];
+			i++;
+		}
+		validComm = !(i == args.length && commPort == null);
+		if (validComm) {
+			// check for '-f' option (file input)
+			for (i = 0; i < args.length; i++) {
+				if (args[i].equals("-f") && (i+1) < args.length) {
+					returnVal[1] = args[i+1];
+					break;
 				}
+			}
+			if (returnVal[1] == null) {
+				System.err.println("No valid input file given. Exiting.");
+				System.exit(Error.INVALID_FILE.ordinal());
 			}
 		}
 		// check if comm port found is valid
@@ -314,14 +273,13 @@ public class Writer {
 			System.err.println("No valid communications port given. Choose from these next time:");
 			for (String s : commPorts) System.err.print(s + " ");
 			System.err.println();
-			System.exit(-1);
+			System.exit(Error.INVALID_INPUT.ordinal());
 		}
 
-		// Assume internal mode unless given otherwise
-		if (returnVal[0] == null) returnVal[0] = "Internal";
-		returnVal[1] = commPort;
+		returnVal[0] = commPort;
 		return returnVal;
 	}
+	
 
 	/**
 	 * See optParse Javadoc for usage cases.
@@ -337,28 +295,35 @@ public class Writer {
 			commPorts.add(en.nextElement().getName());
 		if (commPorts.isEmpty()) {
 			System.err.println("No communication ports present, exiting");
-			System.exit(-1);
+			System.exit(Error.SYSTEM_ERROR.ordinal());
 		}
 
 		// Options parsing
 		String[] opts = optParse(commPorts, args);
-		Mode mode = Mode.valueOf(opts[0]);
-		String commPort = opts[1];
-		String input = opts[2];
+		String commPort = opts[0];
+		String input = opts[1];
 
 		try {
 			w = new Writer(commPort);
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.exit(-1);
+			System.exit(Error.SYSTEM_ERROR.ordinal());
 		}
-		if (mode == Mode.Internal) {
-			w.send();
+		
+		try {
+			XMLParser xp = new XMLParser(w);
+			xp.parse(input);
+		} catch (FileNotFoundException e) {
+			System.err.println("Input XML File not found.  Exiting.");
+			System.exit(Error.INVALID_FILE.ordinal());
+		} catch (SAXException e) {
+			e.printStackTrace();
+			System.exit(Error.SYSTEM_ERROR.ordinal());
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(Error.SYSTEM_ERROR.ordinal());
 		}
-		else if (mode == Mode.File) {
-			new FileParser(w, input);	// parse input file
-			w.send();
-		}
+		w.send();
 		w.exit();
 	}
 }
