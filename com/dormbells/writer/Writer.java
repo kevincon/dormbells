@@ -24,7 +24,7 @@ import gnu.io.UnsupportedCommOperationException;
  */
 public class Writer {
 
-	private enum Error  {
+	enum Error  {
 		INVALID_FILE,
 		INVALID_INPUT,
 		SYSTEM_ERROR;
@@ -38,9 +38,8 @@ public class Writer {
 
 	// Data stream from serial communication
 	private OutputStream out;
-
-	private Set<Tone> availableTones;		// available tones to use
 	
+	private int time;	// lower numeral of time signature
 	// Data to transmit
 	private List<Note> song;		
 	private int pause;
@@ -62,47 +61,20 @@ public class Writer {
 		sp.setSerialPortParams(BAUD_RATE,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
 
 		out = sp.getOutputStream();
-		availableTones = new HashSet<Tone>();
 		song = new ArrayList<Note>();
-	}
-
-	/**
-	 * Add new tone to the set of available tones a song can use.
-	 * If the tone is already in the set, the program will fail and exit.
-	 * @param tone the tone to add
-	 */
-	public void addTone(Tone tone) {
-		if (!availableTones.add(tone)) {
-			System.err.println("A definition for the tone " + tone.getName() + 
-			" already exists. Parse error, exiting");
-			System.exit(Error.INVALID_INPUT.ordinal());
-		}
 	}
 	
 	/**
 	 * Adds a new note to the song.  Will not add the note if max number of notes
-	 * are present in the song.  Will exit if the note is not one of the available tones.
+	 * are present in the song.
 	 * @param note the note to add
 	 */
 	public void addNote(Note note) {
-		if (song.size() == MAX_NUM_NOTES) {
+		if (song.size() == MAX_NUM_NOTES)
 			System.err.println("Sorry, already " + MAX_NUM_NOTES + " notes" +
 			" have been given. No more will be accepted.");
-		}
-		else {
-			for (Tone t : availableTones) {
-				if (t.getName().equals(note.getToneName())) {
-					note.setTone(t);
-					break;
-				}
-			}
-			if (note.getTone() == null) {
-				System.err.println("Invalid note " + note.getToneName() + 
-				" has been given.  Exiting");
-				System.exit(Error.INVALID_INPUT.ordinal());
-			}
+		else
 			song.add(note);
-		}
 	}
 
 	/**
@@ -124,6 +96,12 @@ public class Writer {
 	}
 	
 	/**
+	 * Sets what note value constitutes one beat (the lower numeral of the time signature)
+	 * @param time
+	 */
+	public void setTime(int time) { this.time = time; }
+	
+	/**
 	 * Get the tick values into an integer array for sending
 	 * @return the tick values
 	 */
@@ -131,9 +109,9 @@ public class Writer {
 		int[] tones = new int[song.size()];
 		if (DEBUG) System.out.print("Tones: [");
 		for (int i = 0; i < tones.length; i++) {
-			tones[i] = song.get(i).getTone().getTicks();
+			tones[i] = Note.availableTones.get(song.get(i).getNoteName());
 			if (DEBUG) {
-				System.out.print(song.get(i).getToneName());
+				System.out.print(song.get(i).getNoteName());
 				if (i != tones.length-1) System.out.print(", ");
 			}
 		}
@@ -142,24 +120,36 @@ public class Writer {
 	}
 	
 	/**
-	 * Get the beat values into an integer array for sending
+	 * Converts and returns the beat values derived 
+	 * from the note values in the song. Changes the tempo in
+	 * accordance with the note values and the time signature
+	 * 
 	 * @return the beat values
 	 */
 	private int[] getNotesBeats() {
 		int[] beats = new int[song.size()];
+		int smallestNoteValue = Integer.MIN_VALUE;
+		for (int i = 0; i < beats.length; i++) {
+			beats[i] = song.get(i).getNoteValue();
+			if (beats[i] > smallestNoteValue) smallestNoteValue = beats[i];
+		}
+		
 		if (DEBUG) System.out.print("Beats: [");
 		for (int i = 0; i < beats.length; i++) {
-			beats[i] = song.get(i).getBeats();
+			beats[i] = smallestNoteValue / beats[i];
 			if (DEBUG) {
 				System.out.print(beats[i]);
-				if (song.get(i).getToneName().length() > 1) System.out.print(" ");
+				if (song.get(i).getNoteName().length() > 1) System.out.print(" ");
 				if (i != beats.length-1) System.out.print(", ");
 			}
 		}
+		tempo /= smallestNoteValue / time;
 		if (DEBUG) System.out.println("]");
+		if (DEBUG) System.out.println("New Tempo: " + tempo);
 		return beats;
 	}
 	
+
 	/**
 	 * Send an 8-bit integer over the serial line.  Only the 8 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.
@@ -200,13 +190,15 @@ public class Writer {
 	 */
 	void send() {
 		try {
+			int[] tones = getNotesTones();
+			int[] beats = getNotesBeats();	// has to be called in advance since tempo will change
 			writeByte(song.size());
 			writeByte(pause);
-			writeArray(getNotesTones());
+			writeArray(tones);
 			out.flush();
 			Thread.sleep(40);	// wait for MSP430 to write to flash
 			writeInt(tempo);
-			writeArray(getNotesBeats());
+			writeArray(beats);
 			out.flush();
 		}
 		catch (IOException e) {
@@ -228,7 +220,6 @@ public class Writer {
 		System.exit(0);
 	}
 	
-
 	/**
 	 * one argument must be comm port
 	 * must give -f: take file input for song data (pass filename as next argument)
@@ -280,7 +271,6 @@ public class Writer {
 		return returnVal;
 	}
 	
-
 	/**
 	 * See optParse Javadoc for usage cases.
 	 * @param args

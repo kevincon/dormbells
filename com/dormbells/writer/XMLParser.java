@@ -12,8 +12,10 @@ import java.io.*;
  */
 public class XMLParser extends DefaultHandler {
 	// Local objects to collect data as it comes
-	private Tone currentTone;
-	private Note currentNote;
+	private String toneName;
+	private float toneFreq;
+	private String noteName;
+	private int noteValue;
 
 	// Buffer for collecting data from the "characters" SAX event.
 	private CharArrayWriter contents = new CharArrayWriter();
@@ -33,11 +35,11 @@ public class XMLParser extends DefaultHandler {
 			Attributes attr ) throws SAXException {
 		contents.reset();
 		if (localName.equals("tone"))  {
-			currentTone = new Tone();
+			toneName = null;
 			previousOpenTag = localName;
 		}
 		else if (localName.equals("note")) {
-			currentNote = new Note();
+			noteName = null;
 			previousOpenTag = localName;
 		}
 	}
@@ -49,17 +51,19 @@ public class XMLParser extends DefaultHandler {
 		else if (localName.equals("pause"))
 			w.setPause(Integer.valueOf(contents.toString().trim()));
 		else if (localName.equals("name") && previousOpenTag.equals("tone"))
-			currentTone.setName(contents.toString());
+			toneName = contents.toString();
 		else if (localName.equals("freq"))
-			currentTone.setTicks(Float.valueOf(contents.toString().trim()));
+			toneFreq = Float.valueOf(contents.toString().trim());
 		else if (localName.equals("tone"))
-			w.addTone(currentTone);
+			Note.addTone(toneName, toneFreq);
 		else if (localName.equals("name") && previousOpenTag.equals("note"))
-			currentNote.setToneName(contents.toString());
-		else if (localName.equals("beat"))
-			currentNote.setBeats(Integer.valueOf(contents.toString().trim()));
+			noteName = contents.toString();
+		else if (localName.equals("value"))
+			noteValue = Integer.valueOf(contents.toString().trim());
 		else if (localName.equals("note"))
-			w.addNote(currentNote);
+			w.addNote(new Note(noteName, noteValue));
+		else if (localName.equals("time"))
+			w.setTime(Integer.valueOf(contents.toString().trim()));
 	}
 	
 	public void characters(char[] ch, int start, int length) throws SAXException {
