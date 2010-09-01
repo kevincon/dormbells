@@ -59,7 +59,7 @@ public class Note {
 	 * Accepted note values are powers of 2.  Program will fail and exit if value is not.
 	 */
 	public void setNoteValue(String noteValue) {	
-		Pattern p = Pattern.compile("([0-9]+)(\\.?)");
+		Pattern p = Pattern.compile("\\A([0-9]+)(\\.?)\\z");
 		Matcher m = p.matcher(noteValue);
 		if (m.matches()) {
 			int noteValueInt = Integer.valueOf(m.group(1));
