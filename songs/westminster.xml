@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<song>
+	<!-- Westminster Quarters -->
+	<!-- Notes from http://en.wikipedia.org/wiki/Westminster_Quarters -->
+
+	<tempo>110</tempo>	<!-- bpm -->
+	<pause>50</pause>		<!-- milliseconds -->
+	<time>4</time>			<!-- lower numeral of time signature -->
+
+	<tones>
+		<!-- frequencies from http://www.phy.mtu.edu/~suits/notefreqs.html -->
+		<!--
+		<tone><name>B</name>	<freq>246.94</freq></tone>
+		<tone><name>E</name>	<freq>329.63</freq></tone>
+		<tone><name>F#</name>	<freq>369.99</freq></tone>
+		<tone><name>G#</name>	<freq>415.30</freq></tone>
+		-->
+		<tone><name>B</name>	<freq>493.88</freq></tone>
+		<tone><name>E</name>	<freq>659.26</freq></tone>
+		<tone><name>F#</name>	<freq>739.99</freq></tone>
+		<tone><name>G#</name>	<freq>830.61</freq></tone>
+
+		<tone><name>R</name>	<freq>0</freq></tone>
+	</tones>
+
+	<notes>
+		<!-- valid note values are powers of 2 -->
+		<!-- 4 is quarter note, 8 is eighth note, etc. -->
+		<note><name>E</name>	<value>4</value></note>
+		<note><name>G#</name>	<value>4</value></note>
+		<note><name>F#</name>	<value>4</value></note>
+		<note><name>B</name>	<value>2.</value></note>
+
+		<note><name>R</name>	<value>16</value></note>
+
+		<note><name>E</name>	<value>4</value></note>
+		<note><name>F#</name>	<value>4</value></note>
+		<note><name>G#</name>	<value>4</value></note>
+		<note><name>E</name>	<value>2.</value></note>
+
+		<note><name>R</name>	<value>16</value></note>
+
+		<note><name>G#</name>	<value>4</value></note>
+		<note><name>E</name>	<value>4</value></note>
+		<note><name>F#</name>	<value>4</value></note>
+		<note><name>B</name>	<value>2.</value></note>
+
+		<note><name>R</name>	<value>16</value></note>
+
+		<note><name>B</name>	<value>4</value></note>
+		<note><name>F#</name>	<value>4</value></note>
+		<note><name>G#</name>	<value>4</value></note>
+		<note><name>E</name>	<value>2.</value></note>
+	</notes>
+</song>
