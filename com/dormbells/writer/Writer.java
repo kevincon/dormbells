@@ -82,7 +82,7 @@ public class Writer {
 	 * @param pause the pause in milliseconds
 	 */
 	public void setPause(int pause) {
-		this.pause = Math.round((float)CLOCK_FREQ / (pause * 1000));
+		this.pause = Math.round((float)CLOCK_FREQ * pause / 1000);
 		if (DEBUG) System.out.println("Pause: " + this.pause);
 	}
 	
