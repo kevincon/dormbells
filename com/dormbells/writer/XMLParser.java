@@ -15,7 +15,7 @@ public class XMLParser extends DefaultHandler {
 	private String toneName;
 	private float toneFreq;
 	private String noteName;
-	private int noteValue;
+	private String noteValue;
 
 	// Buffer for collecting data from the "characters" SAX event.
 	private CharArrayWriter contents = new CharArrayWriter();
@@ -59,7 +59,7 @@ public class XMLParser extends DefaultHandler {
 		else if (localName.equals("name") && previousOpenTag.equals("note"))
 			noteName = contents.toString();
 		else if (localName.equals("value"))
-			noteValue = Integer.valueOf(contents.toString().trim());
+			noteValue = contents.toString().trim();
 		else if (localName.equals("note"))
 			w.addNote(new Note(noteName, noteValue));
 		else if (localName.equals("time"))

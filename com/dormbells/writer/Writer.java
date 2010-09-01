@@ -120,7 +120,7 @@ public class Writer {
 	}
 	
 	/**
-	 * Converts and returns the beat values derived 
+	 * Converts and returns beat values derived 
 	 * from the note values in the song. Changes the tempo in
 	 * accordance with the note values and the time signature
 	 * 
@@ -128,23 +128,25 @@ public class Writer {
 	 */
 	private int[] getNotesBeats() {
 		int[] beats = new int[song.size()];
-		int smallestNoteValue = Integer.MIN_VALUE;
-		for (int i = 0; i < beats.length; i++) {
-			beats[i] = song.get(i).getNoteValue();
-			if (beats[i] > smallestNoteValue) smallestNoteValue = beats[i];
+		float[] noteValues = new float[song.size()];
+		float shortestNoteValue = Float.MIN_VALUE;
+		
+		// find shortest note (means largest number)
+		for (int i = 0; i < noteValues.length; i++) {
+			noteValues[i] = song.get(i).getNoteValue();
+			if (noteValues[i] > shortestNoteValue) shortestNoteValue = noteValues[i];
 		}
 		
-		if (DEBUG) System.out.print("Beats: [");
-		for (int i = 0; i < beats.length; i++) {
-			beats[i] = smallestNoteValue / beats[i];
-			if (DEBUG) {
-				System.out.print(beats[i]);
-				if (song.get(i).getNoteName().length() > 1) System.out.print(" ");
-				if (i != beats.length-1) System.out.print(", ");
-			}
-		}
-		tempo /= smallestNoteValue / time;
-		if (DEBUG) System.out.println("]");
+		// convert to ints for use as beats
+		// since all beat values have 3 in numerator,
+		// multiplying by 3 will eliminate all fractions (without needing to calculate GCF)
+		// working with shortest note will make beat values as small as possible
+		for (int i = 0; i < beats.length; i++)
+			beats[i] = (int)Math.rint((shortestNoteValue * 3 / noteValues[i]));
+		
+		// account for the extra 3 and the "normalizing" in the tempo
+		tempo /= shortestNoteValue * 3 / time;
+		if (DEBUG) System.out.println("Beats: " + Arrays.toString(beats));
 		if (DEBUG) System.out.println("New Tempo: " + tempo);
 		return beats;
 	}

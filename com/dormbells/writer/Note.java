@@ -1,6 +1,7 @@
 package com.dormbells.writer;
 
 import java.util.HashMap;
+import java.util.regex.*;
 
 import com.dormbells.writer.Writer.Error;
 
@@ -14,7 +15,7 @@ import com.dormbells.writer.Writer.Error;
 public class Note {
 
 	private String noteName = null;
-	private int noteValue;
+	private float noteValue;
 	
 	/** the tones available for playback in the song */
 	static HashMap<String, Integer> availableTones = new HashMap<String, Integer>();
@@ -42,7 +43,7 @@ public class Note {
 	 * @param noteName the name of the note to add, e.g. "F#"
 	 * @param noteValue the value of the note, e.g. 8 for eighth note
 	 */
-	public Note(String noteName, int noteValue) {
+	public Note(String noteName, String noteValue) {
 		if (!availableTones.containsKey(noteName)) {
 			System.err.println("Invalid note " + noteName + 
 			" has been given.  Exiting");
@@ -53,19 +54,32 @@ public class Note {
 	}
 
 	/** 
-	 * @param noteValue the note value to set, e.g. 8 for eighth note 
+	 * @param noteValue the note value to set, e.g. 8 for eighth note
+	 * Note values can also be dotted, e.g. "8." to increase length by 50%
 	 * Accepted note values are powers of 2.  Program will fail and exit if value is not.
 	 */
-	public void setNoteValue(int noteValue) {	
-		if ((noteValue & (noteValue - 1)) != 0) {	// cool power of 2 check; thanks Wikipedia!
-			System.err.println("The note value " + noteValue + "is invalid." + 
-					"Parse error, exiting");
-			System.exit(Error.INVALID_INPUT.ordinal());
+	public void setNoteValue(String noteValue) {	
+		Pattern p = Pattern.compile("([0-9]+)(\\.?)");
+		Matcher m = p.matcher(noteValue);
+		if (m.matches()) {
+			int noteValueInt = Integer.valueOf(m.group(1));
+			if ((noteValueInt & (noteValueInt - 1)) == 0) {	// cool power of 2 check; thanks Wikipedia!
+				float noteValueFloat;
+				if (m.group(2).equals("."))
+					noteValueFloat = (float)noteValueInt - (float)noteValueInt * 0.25f;	// equiv. of 1.5x length
+				else
+					noteValueFloat = (float)noteValueInt;
+				this.noteValue = noteValueFloat;
+				return;
+			}
 		}
-		this.noteValue = noteValue;
+		System.err.println("The note value " + noteValue + " is invalid." + 
+				" Parse error, exiting");
+		System.exit(Error.INVALID_INPUT.ordinal());
 	}
+	
 	/** @return the note value, e.g. 8 for eighth note */
-	public int getNoteValue() {	return noteValue;	}
+	public float getNoteValue() {	return noteValue;	}
 	/** @param noteName the note name to set */
 	public void setNoteName(String noteName) {	this.noteName = noteName;	}
 	/** @return the note name */
