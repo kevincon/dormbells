@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<song>
+	<tempo>169</tempo>	<!-- bpm -->
+	<pause>10</pause>		<!-- milliseconds -->
+	<time>4</time>			<!-- lower numeral of time signature -->
+
+	<tones>
+		<!-- D Major -->
+		<!-- frequencies from http://www.phy.mtu.edu/~suits/notefreqs.html -->
+		<tone><name>D</name>	<freq>293.66</freq></tone>
+		<tone><name>E</name>	<freq>329.63</freq></tone>
+		<tone><name>F#</name>	<freq>369.99</freq></tone>
+		<tone><name>G</name>	<freq>392.00</freq></tone>
+		<tone><name>A</name>	<freq>440.00</freq></tone>
+		<tone><name>B</name>	<freq>493.88</freq></tone>
+		<tone><name>C#</name>	<freq>554.37</freq></tone>
+		<tone><name>d</name>	<freq>587.33</freq></tone>
+		<!-- rest has frequency of 0 -->
+		<tone><name>R</name>	<freq>0</freq></tone>
+	</tones>
+
+	<notes>
+		<!-- valid note values are powers of 2 -->
+		<!-- 4 is quarter note, 8 is eighth note, etc. -->
+		<note><name>D</name>	<value>4</value></note>
+		<note><name>D</name>	<value>4</value></note>
+
+		<note><name>E</name>	<value>8</value></note>
+		<note><name>G</name>	<value>8</value></note>
+		<note><name>F#</name>	<value>8</value></note>
+		<note><name>E</name>	<value>8</value></note>
+
+		<note><name>A</name>	<value>4</value></note>
+		<note><name>A</name>	<value>4</value></note>
+
+		<note><name>A</name>	<value>8</value></note>
+		<note><name>B</name>	<value>8</value></note>
+		<note><name>F#</name>	<value>8</value></note>
+		<note><name>G</name>	<value>8</value></note>
+
+		<note><name>E</name>	<value>4</value></note>
+		<note><name>E</name>	<value>4</value></note>
+
+		<note><name>E</name>	<value>8</value></note>
+		<note><name>G</name>	<value>8</value></note>
+		<note><name>F#</name>	<value>8</value></note>
+		<note><name>E</name>	<value>8</value></note>
+
+		<note><name>D</name>	<value>8</value></note>
+		<note><name>d</name>	<value>8</value></note>
+		<note><name>C#</name>	<value>8</value></note>
+		<note><name>B</name>	<value>8</value></note>
+
+		<note><name>A</name>	<value>8</value></note>
+		<note><name>G</name>	<value>8</value></note>
+		<note><name>F#</name>	<value>8</value></note>
+		<note><name>E</name>	<value>8</value></note>
+
+		<note><name>D</name>	<value>4</value></note>
+		<note><name>D</name>	<value>4</value></note>
+
+		<note><name>E</name>	<value>8</value></note>
+		<note><name>G</name>	<value>8</value></note>
+		<note><name>F#</name>	<value>8</value></note>
+		<note><name>E</name>	<value>8</value></note>
+
+		<note><name>A</name>	<value>4</value></note>
+		<note><name>A</name>	<value>4</value></note>
+
+		<note><name>A</name>	<value>8</value></note>
+		<note><name>B</name>	<value>8</value></note>
+		<note><name>F#</name>	<value>8</value></note>
+		<note><name>G</name>	<value>8</value></note>
+
+		<note><name>E</name>	<value>4</value></note>
+		<note><name>E</name>	<value>4</value></note>
+
+		<note><name>E</name>	<value>8</value></note>
+		<note><name>G</name>	<value>8</value></note>
+		<note><name>F#</name>	<value>8</value></note>
+		<note><name>E</name>	<value>8</value></note>
+
+		<note><name>D</name>	<value>8</value></note>
+		<note><name>A</name>	<value>8</value></note>
+		<note><name>E</name>	<value>8</value></note>
+		<note><name>F#</name>	<value>8</value></note>
+
+		<note><name>D</name>	<value>4</value></note>
+		<note><name>D</name>	<value>4</value></note>
+	</notes>
+</song>
