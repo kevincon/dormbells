@@ -14,9 +14,11 @@ if [ -e "/dev/ttyACM0" ]; then
 fi
 
 cd $serial
+make
 mspdebug rf2500 "prog main.elf"
 
 read -p "Press ENTER to continue "
 
 cd $dormbell
+make
 mspdebug rf2500 "prog main.elf"

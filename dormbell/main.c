@@ -1,11 +1,25 @@
+﻿/* DormBell
+ * Copyright (C) 2010 DormBells
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #define DEBUG
 
-#ifdef GCC
+
 #include <io.h>
 #include <signal.h>
-#else
-#include "msp430g2231.h"
-#endif
 
 // PINS  ===========================================
 #define     LED0                  BIT0
@@ -67,7 +81,7 @@ unsigned char pause; // ~1 ms
 volatile unsigned int tone = 0; 			// current tone
 volatile unsigned int duration = 0;		// current duration
 
-// OTHER DECLARATIONS  =======================================
+// FUNCTION PROTOTYPES  ======================================
 
 void init_leds(void);
 void init_button(void);
@@ -133,14 +147,11 @@ void init_pwm(void)
 
 void init_consts(void)
 {
-	//	Example: Happy Birthday!
-	// { g, g, a, g, c, b, R, g, g, a, g, d, c, R }
 	melody = (unsigned char *)(INFOMEM + 2);
-	// { 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1 } 
 	beats = (unsigned char *)(INFOMEM + 192/2 + 2);
 	length = *(unsigned char *)(INFOMEM);  
-	pause = *(unsigned char *)(INFOMEM + 1); // 33, ~1 ms
-	tempo = *(unsigned int *)(INFOMEM + 192/2); // ~169 BPM, which sounded about right for Happy Birthday
+	pause = *(unsigned char *)(INFOMEM + 1);
+	tempo = *(unsigned int *)(INFOMEM + 192/2);
 }
 	
 void play_song(void)
@@ -188,12 +199,7 @@ void play_tone(void)
 	while(TACTL & MC_2);	// wait for timer to stop (tone is done playing)
 }
 
-#ifdef GCC
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
-#else
-#pragma vector=PORT1_VECTOR
-__interrupt void PORT1_ISR(void)
-#endif
 {   
 	BUTTON_IFG = 0;  				// clear interrupt flag
 	BUTTON_IE &= ~BUTTON; 	//  Debounce (no multiple presses)
@@ -201,23 +207,13 @@ __interrupt void PORT1_ISR(void)
 	BUTTON_IE |= BUTTON;		// reenable interrupt
 }
 
-#ifdef GCC
 interrupt(TIMERA0_VECTOR) TACCR0_ISR (void)
-#else
-#pragma vector=TIMERA0_VECTOR
-interrupt void TACCR0_ISR(void)
-#endif
 {
 	TACTL &= ~(MC_2);			// stop timer
 	TACTL |= TACLR;				// clear timer
 }
 
-#ifdef GCC
 interrupt(TIMERA1_VECTOR) TACCR1_ISR (void)
-#else
-#pragma vector=TIMERA1_VECTOR
-interrupt void TACCR1_ISR(void)
-#endif
 {
   TACCTL1 &= ~CCIFG;	// clear interrupt flag
   TACCR1 += tone;			// update for next compare match
