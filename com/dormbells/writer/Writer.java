@@ -24,7 +24,7 @@ import gnu.io.UnsupportedCommOperationException;
  */
 public class Writer {
 
-	enum Error  {
+	enum Error {
 		INVALID_FILE,
 		INVALID_INPUT,
 		SYSTEM_ERROR;
@@ -109,7 +109,7 @@ public class Writer {
 		int[] tones = new int[song.size()];
 		if (DEBUG) System.out.print("Tones: [");
 		for (int i = 0; i < tones.length; i++) {
-			tones[i] = Note.availableTones.get(song.get(i).getNoteName());
+			tones[i] = song.get(i).getNoteTicks();
 			if (DEBUG) {
 				System.out.print(song.get(i).getNoteName());
 				if (i != tones.length-1) System.out.print(", ");
@@ -120,11 +120,12 @@ public class Writer {
 	}
 	
 	/**
-	 * Converts and returns beat values derived 
-	 * from the note values in the song. Changes the tempo in
-	 * accordance with the note values and the time signature
+	 * Converts and returns beat values derived from the note 
+	 * values in the song. Changes the tempo in accordance 
+	 * with the note values and the time signature. Program 
+	 * fails and exits if a note is too lengthy to be playable.
 	 * 
-	 * @return the beat values
+	 * @return the beat values for transmission
 	 */
 	private int[] getNotesBeats() {
 		int[] beats = new int[song.size()];
@@ -141,17 +142,25 @@ public class Writer {
 		// since all beat values have 3 in numerator,
 		// multiplying by 3 will eliminate all fractions (without needing to calculate GCF)
 		// working with shortest note will make beat values as small as possible
-		for (int i = 0; i < beats.length; i++)
-			beats[i] = (int)Math.rint((shortestNoteValue * 3 / noteValues[i]));
-		
-		// account for the extra 3 and the "normalizing" in the tempo
+		// these changes must be accounted for in the tempo
 		tempo /= shortestNoteValue * 3 / time;
+		for (int i = 0; i < beats.length; i++) {
+			beats[i] = (int)Math.rint((shortestNoteValue * 3 / noteValues[i]));
+			// check if note is too lengthy to be playable
+			if (beats[i] * tempo > 65535) {
+				System.err.println("Uh oh, note " + (i+1) + " (" + 
+					song.get(i).getNoteName() + ", " + song.get(i).getNoteValue() + ")" +
+					" is too long to playback on MSP430. Please either increase tempo" +
+					"or shorten the note. Error, exiting"  );
+				System.exit(Error.SYSTEM_ERROR.ordinal());
+			}
+		}
+		
 		if (DEBUG) System.out.println("Beats: " + Arrays.toString(beats));
 		if (DEBUG) System.out.println("New Tempo: " + tempo);
 		return beats;
 	}
 	
-
 	/**
 	 * Send an 8-bit integer over the serial line.  Only the 8 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.

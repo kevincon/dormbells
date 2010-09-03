@@ -12,14 +12,11 @@ import java.io.*;
  */
 public class XMLParser extends DefaultHandler {
 	// Local objects to collect data as it comes
-	private String toneName;
-	private float toneFreq;
 	private String noteName;
 	private String noteValue;
 
 	// Buffer for collecting data from the "characters" SAX event.
 	private CharArrayWriter contents = new CharArrayWriter();
-	private String previousOpenTag;
 	private XMLReader xr;
 	
 	private Writer w;
@@ -34,13 +31,8 @@ public class XMLParser extends DefaultHandler {
 			String qName,
 			Attributes attr ) throws SAXException {
 		contents.reset();
-		if (localName.equals("tone"))  {
-			toneName = null;
-			previousOpenTag = localName;
-		}
-		else if (localName.equals("note")) {
-			noteName = null;
-			previousOpenTag = localName;
+		if (localName.equals("note")) {
+			noteName = null; noteValue = null;
 		}
 	}
 	public void endElement( String namespaceURI,
@@ -50,13 +42,7 @@ public class XMLParser extends DefaultHandler {
 			w.setTempo(Integer.valueOf(contents.toString().trim()));
 		else if (localName.equals("pause"))
 			w.setPause(Integer.valueOf(contents.toString().trim()));
-		else if (localName.equals("name") && previousOpenTag.equals("tone"))
-			toneName = contents.toString();
-		else if (localName.equals("freq"))
-			toneFreq = Float.valueOf(contents.toString().trim());
-		else if (localName.equals("tone"))
-			Note.addTone(toneName, toneFreq);
-		else if (localName.equals("name") && previousOpenTag.equals("note"))
+		else if (localName.equals("name"))
 			noteName = contents.toString();
 		else if (localName.equals("value"))
 			noteValue = contents.toString().trim();

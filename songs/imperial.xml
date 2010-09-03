@@ -2,123 +2,106 @@
 
 <song>
 	<!-- The Imperial March -->
-	<!-- A port of the notes from http://processors.wiki.ti.com/index.php/Playing_The_Imperial_March -->
-	<!-- and the sheet music from http://fliiby.com/file/209232/dxth0xom8p.html -->
+	<!--
+	A mix of the composition from 
+	http://processors.wiki.ti.com/index.php/Playing_The_Imperial_March
+	and
+	http://www.musicnotes.com/images/productimages/mtd/MN0016254.gif
+	-->
 	<tempo>120</tempo>	<!-- bpm -->
 	<pause>20</pause>		<!-- milliseconds -->
 	<time>4</time>
 
-	<tones>
-		<!-- frequencies from http://www.phy.mtu.edu/~suits/notefreqs.html -->
-		<tone><name>c</name>		<freq>261</freq></tone>
-		<tone><name>d</name>		<freq>294</freq></tone>
-		<tone><name>e</name>		<freq>329</freq></tone>
-		<tone><name>f</name>		<freq>349</freq></tone>
-		<tone><name>g</name>		<freq>391</freq></tone>
-		<tone><name>gS</name>		<freq>415</freq></tone>
-		<tone><name>a</name>		<freq>440</freq></tone>
-		<tone><name>aS</name>		<freq>455</freq></tone>
-		<tone><name>b</name>		<freq>466</freq></tone>
-		<tone><name>cH</name>		<freq>523</freq></tone>
-		<tone><name>cSH</name>	<freq>554</freq></tone>
-		<tone><name>dH</name>		<freq>587</freq></tone>
-		<tone><name>dSH</name>	<freq>622</freq></tone>
-		<tone><name>eH</name>		<freq>659</freq></tone>
-		<tone><name>fH</name>		<freq>698</freq></tone>
-		<tone><name>fSH</name>	<freq>740</freq></tone>
-		<tone><name>gH</name>		<freq>784</freq></tone>
-		<tone><name>gSH</name>	<freq>830</freq></tone>
-		<tone><name>aH</name>		<freq>880</freq></tone>
-		<tone><name>R</name>		<freq>0</freq></tone>
-	</tones>
-
 	<notes>
-		<note><name>a</name>		<value>4</value></note>
-		<note><name>a</name>		<value>4</value></note>
-		<note><name>a</name>		<value>4</value></note>
-		<note><name>f</name>		<value>8.</value></note>
-		<note><name>cH</name>		<value>16</value></note>  
+		<!-- valid note values are powers of 2 -->
+		<!-- 4 is quarter note, 8 is eighth note, etc. -->
+		<!-- for valid SPN see here: http://en.wikipedia.org/wiki/Piano_key_frequencies -->
+		<note><name>A4</name>		<value>4</value></note>
+		<note><name>A4</name>		<value>4</value></note>
+		<note><name>A4</name>		<value>4</value></note>
+		<note><name>F4</name>		<value>8.</value></note>
+		<note><name>C5</name>		<value>16</value></note>  
 
-		<note><name>a</name>		<value>4</value></note>
-		<note><name>f</name>		<value>8.</value></note>
-		<note><name>cH</name>		<value>16</value></note>
-		<note><name>a</name>		<value>2</value></note>
-
-		<!-- extra pause is nice -->
-		<note><name>R</name>		<value>16</value></note>
-
-		<note><name>eH</name>		<value>4</value></note>
-		<note><name>eH</name>		<value>4</value></note>
-		<note><name>eH</name>		<value>4</value></note>   
-		<note><name>fH</name>		<value>8.</value></note>
-		<note><name>cH</name>		<value>16</value></note>
-
-		<note><name>gS</name>		<value>4</value></note>
-		<note><name>f</name>		<value>8.</value></note>
-		<note><name>cH</name>		<value>16</value></note>
-		<note><name>a</name>		<value>2</value></note>
+		<note><name>A4</name>		<value>4</value></note>
+		<note><name>F4</name>		<value>8.</value></note>
+		<note><name>C5</name>		<value>16</value></note>
+		<note><name>A4</name>		<value>2</value></note>
 
 		<!-- extra pause is nice -->
 		<note><name>R</name>		<value>16</value></note>
 
-		<note><name>aH</name>		<value>4</value></note>
-		<note><name>a</name>		<value>8.</value></note>
-		<note><name>a</name>		<value>16</value></note>
-		<note><name>aH</name>		<value>4</value></note>
-		<note><name>gSH</name>	<value>8.</value></note>
-		<note><name>gH</name>		<value>16</value></note> 
+		<note><name>E5</name>		<value>4</value></note>
+		<note><name>E5</name>		<value>4</value></note>
+		<note><name>E5</name>		<value>4</value></note>   
+		<note><name>F5</name>		<value>8.</value></note>
+		<note><name>C5</name>		<value>16</value></note>
 
-		<note><name>fSH</name>	<value>16</value></note>
-		<note><name>fH</name>		<value>16</value></note>    
-		<note><name>fSH</name>	<value>8</value></note>
+		<note><name>Ab4</name>		<value>4</value></note>
+		<note><name>F4</name>		<value>8.</value></note>
+		<note><name>C5</name>		<value>16</value></note>
+		<note><name>A4</name>		<value>2</value></note>
+
+		<!-- extra pause is nice -->
+		<note><name>R</name>		<value>16</value></note>
+
+		<note><name>A5</name>		<value>4</value></note>
+		<note><name>A4</name>		<value>8.</value></note>
+		<note><name>A4</name>		<value>16</value></note>
+		<note><name>A5</name>		<value>4</value></note>
+		<note><name>Ab5</name>	<value>8.</value></note>
+		<note><name>G5</name>		<value>16</value></note> 
+
+		<note><name>Gb5</name>	<value>16</value></note>
+		<note><name>F5</name>		<value>16</value></note>    
+		<note><name>Gb5</name>	<value>8</value></note>
 		<note><name>R</name>		<value>8</value></note>
-		<note><name>aS</name>		<value>8</value></note> 
-		<note><name>dSH</name>	<value>4</value></note> 
-		<note><name>dH</name>		<value>8.</value></note>  
-		<note><name>cSH</name>	<value>16</value></note>  
+		<note><name>Bb4</name>		<value>8</value></note> 
+		<note><name>Eb5</name>	<value>4</value></note> 
+		<note><name>D5</name>		<value>8.</value></note>  
+		<note><name>Db5</name>	<value>16</value></note>  
 
-		<note><name>cH</name>		<value>16</value></note>  
-		<note><name>b</name>		<value>16</value></note>  
-		<note><name>cH</name>		<value>8</value></note>  
+		<note><name>C5</name>		<value>16</value></note>  
+		<note><name>B4</name>		<value>16</value></note>  
+		<note><name>C5</name>		<value>8</value></note>  
 		<note><name>R</name>		<value>8</value></note>
-		<note><name>f</name>		<value>8</value></note>  
-		<note><name>gS</name>		<value>4</value></note>  
-		<note><name>f</name>		<value>8.</value></note>  
-		<note><name>a</name>		<value>16</value></note>
+		<note><name>F4</name>		<value>8</value></note>  
+		<note><name>Ab4</name>		<value>4</value></note>  
+		<note><name>F4</name>		<value>8.</value></note>  
+		<note><name>Ab4</name>		<value>16</value></note>
 
-		<note><name>cH</name>		<value>4</value></note>
-		<note><name>a</name>		<value>8.</value></note>  
-		<note><name>cH</name>		<value>16</value></note>
-		<note><name>eH</name>		<value>2</value></note>
+		<note><name>C5</name>		<value>4</value></note>
+		<note><name>A4</name>		<value>8.</value></note>  
+		<note><name>C5</name>		<value>16</value></note>
+		<note><name>E5</name>		<value>2</value></note>
 
-		<note><name>aH</name>		<value>4</value></note>
-		<note><name>a</name>		<value>8.</value></note>
-		<note><name>a</name>		<value>16</value></note>
-		<note><name>aH</name>		<value>4</value></note>
-		<note><name>gSH</name>	<value>8.</value></note>
-		<note><name>gH</name>		<value>16</value></note>
+		<note><name>A5</name>		<value>4</value></note>
+		<note><name>A4</name>		<value>8.</value></note>
+		<note><name>A4</name>		<value>16</value></note>
+		<note><name>A5</name>		<value>4</value></note>
+		<note><name>Ab5</name>	<value>8.</value></note>
+		<note><name>G5</name>		<value>16</value></note>
 
-		<note><name>fSH</name>	<value>16</value></note>
-		<note><name>fH</name>		<value>16</value></note>    
-		<note><name>fSH</name>	<value>8</value></note>
+		<note><name>Gb5</name>	<value>16</value></note>
+		<note><name>F5</name>		<value>16</value></note>    
+		<note><name>Gb5</name>	<value>8</value></note>
 		<note><name>R</name>		<value>8</value></note>
-		<note><name>aS</name>		<value>8</value></note>  
-		<note><name>dSH</name>	<value>4</value></note>  
-		<note><name>dH</name>		<value>8.</value></note>  
-		<note><name>cSH</name>	<value>16</value></note>  
+		<note><name>B4</name>		<value>8</value></note>  
+		<note><name>Eb5</name>	<value>4</value></note>  
+		<note><name>D5</name>		<value>8.</value></note>  
+		<note><name>Db5</name>	<value>16</value></note>  
 
-		<note><name>cH</name>		<value>16</value></note>  
-		<note><name>b</name>		<value>16</value></note>  
-		<note><name>cH</name>		<value>8</value></note>      
+		<note><name>C5</name>		<value>16</value></note>  
+		<note><name>B4</name>		<value>16</value></note>  
+		<note><name>C5</name>		<value>8</value></note>      
 		<note><name>R</name>		<value>8</value></note>
-		<note><name>f</name>		<value>8</value></note>  
-		<note><name>gS</name>		<value>4</value></note>  
-		<note><name>f</name>		<value>8.</value></note>  
-		<note><name>cH</name>		<value>16</value></note>
+		<note><name>F4</name>		<value>8</value></note>  
+		<note><name>Ab4</name>		<value>4</value></note>  
+		<note><name>F4</name>		<value>8.</value></note>  
+		<note><name>C5</name>		<value>16</value></note>
 
-		<note><name>a</name>		<value>4</value></note>   
-		<note><name>f</name>		<value>8.</value></note>   
-		<note><name>cH</name>		<value>16</value></note> 
-		<note><name>a</name>		<value>2</value></note>   
+		<note><name>A4</name>		<value>4</value></note>   
+		<note><name>F4</name>		<value>8.</value></note>   
+		<note><name>C5</name>		<value>16</value></note> 
+		<note><name>A4</name>		<value>2</value></note>   
 	</notes>
 </song>

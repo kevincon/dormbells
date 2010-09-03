@@ -1,57 +1,70 @@
 package com.dormbells.writer;
 
-import java.util.HashMap;
 import java.util.regex.*;
 
 import com.dormbells.writer.Writer.Error;
 
-
 /**
- * Class for a note in a song.  Maintains a hash map of all allowed tones.
+ * Class for a note in a song.  Translates scientific pitch
+ * notation (SPN) note names into MSP430 clock ticks
+ * and note values into appropriate duration values.
  * 
  * @author Varun Sampath <vsampath@seas.upenn.edu>
  *
  */
 public class Note {
 
-	private String noteName = null;
+	// required fields
+	private String noteName;
 	private float noteValue;
+	private int noteTicks;
 	
-	/** the tones available for playback in the song */
-	static HashMap<String, Integer> availableTones = new HashMap<String, Integer>();
-
-	/**
-	 * Add new tone to the set of available tones a song can use.
-	 * If the tone is already in the set, the program will not redefine it.
-	 * @param name the name of the tone to add, e.g. "F#"
-	 * @param freq the frequency of the tone to add
-	 */
-	public static void addTone(String name, float freq) {
-		if (availableTones.containsKey(name)) {
-			System.err.println("A definition for the tone " + name + 
-			" already exists. Not going to redefine it");
-		}
-		else {
-			int ticks = (freq != 0) ? Math.round(Writer.CLOCK_FREQ / (freq * 2)) : 0;
-			availableTones.put(name, ticks);
-		}
-	}
+	// useful fields
+	private String note;
+	private boolean isSharp;
+	private boolean isFlat;
+	private int index;
 	
 	/**
-	 * Constructor for a new note for adding to the song
-	 * Program will fail and exit if the note is not one of the available tones.
-	 * @param noteName the name of the note to add, e.g. "F#"
+	 * Constructor for a new note
+	 * 
+	 * @param noteName the name of the note to add in SPN, e.g. "F#4"
 	 * @param noteValue the value of the note, e.g. 8 for eighth note
 	 */
 	public Note(String noteName, String noteValue) {
-		if (!availableTones.containsKey(noteName)) {
+		this.setNoteName(noteName);
+		this.setNoteValue(noteValue);
+		this.setNoteTicks();
+	}
+	
+	/**
+	 * sets the note name for the note
+	 * Program will fail and exit if note name is not in SPN format
+	 * Use '#' for Sharp, 'b' for Flat, and 'R' for rest
+	 * 
+	 * @param noteName the note name in SPN, e.g. "Gb3"
+	 */
+	public void setNoteName(String noteName) {
+		Pattern p = Pattern.compile("\\A([A-G])(#|b)?([0-8])\\z");
+		Matcher m = p.matcher(noteName);
+		if (m.matches()) {
+			this.noteName = noteName;
+			note = m.group(1);
+			isSharp = "#".equals(m.group(2));
+			isFlat = "b".equals(m.group(2));
+			index = Integer.valueOf(m.group(3));	
+		}
+		else if (noteName.equals("R"))
+			this.noteName = note = noteName;
+		else {
 			System.err.println("Invalid note " + noteName + 
 			" has been given.  Exiting");
 			System.exit(Error.INVALID_INPUT.ordinal());
 		}
-		this.setNoteName(noteName);
-		this.setNoteValue(noteValue);
 	}
+	
+	/** @return the note name in scientific pitch notation */
+	public String getNoteName() {	return noteName;	}
 
 	/** 
 	 * @param noteValue the note value to set, e.g. 8 for eighth note
@@ -80,8 +93,69 @@ public class Note {
 	
 	/** @return the note value, e.g. 8 for eighth note */
 	public float getNoteValue() {	return noteValue;	}
-	/** @param noteName the note name to set */
-	public void setNoteName(String noteName) {	this.noteName = noteName;	}
-	/** @return the note name */
-	public String getNoteName() {	return noteName;	}
+
+	/**
+	 * Calculates and sets the number of timer ticks the
+	 * MSP430 needs to wait before changing square wave voltage.
+	 * 
+	 * Program will fail and exit if the note name is not set first.
+	 */
+	public void setNoteTicks() {
+		int key = noteNametoKey();
+		if (key != -1)
+			this.noteTicks = keyToTicks(key);
+		else {
+			System.err.println("The note sub-name " + note + 
+					" is invalid.  Error, exiting");
+			System.exit(Error.SYSTEM_ERROR.ordinal());
+		}
+	}
+
+	/**
+	 * @return the number of timer ticks the MSP430 needs 
+	 * to wait before changing square wave voltage. Used
+	 * by the PWM system to playback a tone.
+	 */
+	public int getNoteTicks() {
+		return noteTicks;
+	}
+	
+	/**
+	 * helper method for setNoteTicks() that takes data
+	 * from an SPN note to figure out the associated piano key.
+	 * That key can be used to calculate frequency and thus ticks.
+	 * 
+	 * @return the piano key associated with the SPN note
+	 */
+	private int noteNametoKey() {
+		int key = 12 * index;
+		if 		(note.equals("A")) key += 1;
+		else if (note.equals("B")) key += 3;
+		else if (note.equals("C")) key -= 8;
+		else if (note.equals("D")) key -= 6;
+		else if (note.equals("E")) key -= 4;
+		else if (note.equals("F")) key -= 3;
+		else if (note.equals("G")) key -= 1;
+		else if (note.equals("R")) key = 0;
+		else return -1;
+		
+		if (isSharp) key++;
+		if (isFlat) key--;
+		return key;
+	}
+	
+	/**
+	 * Helper method for setNoteTicks() that uses the piano key
+	 * to calculate frequency and PWM timer ticks.
+	 * @param key the piano key for the SPN note
+	 * @return the number of PWM timer ticks needed for note playback
+	 */
+	private int keyToTicks(int key) {
+		// if freq is 0 then note is a rest
+		if (key == 0) return 0;
+		// formula from http://en.wikipedia.org/wiki/Piano_key_frequencies
+		double freq = 440 * Math.pow(2, (float)(key - 49) / 12);
+		return (int) (Math.round(Writer.CLOCK_FREQ / (freq * 2)));
+	}
+	
 }
