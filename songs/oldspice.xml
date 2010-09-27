@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<song>
+	<!-- Old Spice Jingle -->
+	<!-- Credit Sriram Radhakrishnan -->
+
+	<tempo>170</tempo>	<!-- bpm -->
+	<pause>50</pause>		<!-- milliseconds -->
+	<time>4</time>			<!-- lower numeral of time signature -->
+
+	<notes>
+		<!-- valid note values are powers of 2 -->
+		<!-- 4 is quarter note, 8 is eighth note, etc. -->
+		<!-- for valid SPN see here: http://en.wikipedia.org/wiki/Piano_key_frequencies -->
+		<note><name>A4</name>	<value>8</value></note>
+		<note><name>A4</name>	<value>8</value></note>
+		<note><name>B4</name>	<value>4</value></note>
+		<note><name>D5</name>	<value>4</value></note>
+
+		<note><name>C#5</name>	<value>4</value></note>
+		<note><name>E5</name>	<value>8</value></note>
+		<note><name>F#5</name>	<value>4</value></note>
+		<note><name>D5</name>	<value>4</value></note>
+
+	</notes>
+</song>

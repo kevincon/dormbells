@@ -27,7 +27,7 @@
  * the Can-Can.
  */
 
-#ifdef GCC
+#if defined(__GNUC__ == 4)
 #include <io.h>
 #include <signal.h>
 #else
@@ -225,7 +225,7 @@ unsigned char read()
 	return 0xFF;
 }
 
-#ifdef GCC
+#if defined(__GNUC__)
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
 #else
 #pragma vector=PORT1_VECTOR
