@@ -4,6 +4,7 @@
 	<!-- The Can-Can -->
 	<!-- Notes from my middle school orchestra memory :) -->
 
+	<title>The Can-Can</title>
 	<tempo>169</tempo>	<!-- bpm -->
 	<pause>10</pause>		<!-- milliseconds -->
 	<time>4</time>			<!-- lower numeral of time signature -->

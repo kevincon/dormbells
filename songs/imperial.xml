@@ -8,6 +8,7 @@
 	and
 	http://www.musicnotes.com/images/productimages/mtd/MN0016254.gif
 	-->
+	<title>The Imperial March</title>
 	<tempo>120</tempo>	<!-- bpm -->
 	<pause>20</pause>		<!-- milliseconds -->
 	<time>4</time>

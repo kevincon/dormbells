@@ -48,24 +48,24 @@ public class Writer {
 		SYSTEM_ERROR;
 	}
 	
-	private static final int BAUD_RATE = 2400;				// communication speed (baud)
+	/** communication speed (baud) */
+	private static final int BAUD_RATE = 2400;
+	/** size of usable MSP430 info memory */
+	private static final int MAX_BYTES = 192;
     /** MSP430 Timer clock in Hz */
 	public static final int CLOCK_FREQ = 32768;
-	private static final int MAX_NUM_NOTES = 94;
-	private static final boolean DEBUG = true;
+	public static final boolean DEBUG = true;
 
-	// Data stream from serial communication
+	/** Data stream from serial communication */
 	private OutputStream out;
-	
-	private int time;	// lower numeral of time signature
-	// Data to transmit
-	private List<Note> song;		
-	private int pause;
-	private int tempo;	
+	/** Data to transmit */
+	private static List<Song> songs;		
+
 
 	/**
 	 * Initializes serial communication and data streams.
-	 * @param portName the name of port used for communication, e.g. "COM1" for Windows or "/dev/ttyUSB0" for Linux.
+	 * @param portName the name of port used for communication, 
+	 * e.g. "COM1" for Windows or "/dev/ttyUSB0" for Linux.
 	 * @throws NoSuchPortException
 	 * @throws PortInUseException
 	 * @throws UnsupportedCommOperationException
@@ -79,108 +79,12 @@ public class Writer {
 		sp.setSerialPortParams(BAUD_RATE,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
 
 		out = sp.getOutputStream();
-		song = new ArrayList<Note>();
+		songs = new ArrayList<Song>();
 	}
 	
 	/**
-	 * Adds a new note to the song.  Will not add the note if max number of notes
-	 * are present in the song.
-	 * @param note the note to add
-	 */
-	public void addNote(Note note) {
-		if (song.size() == MAX_NUM_NOTES)
-			System.err.println("Sorry, already " + MAX_NUM_NOTES + " notes" +
-			" have been given. No more will be accepted.");
-		else
-			song.add(note);
-	}
-
-	/**
-	 * Sets the pause in between the notes in clock ticks
-	 * @param pause the pause in milliseconds
-	 */
-	public void setPause(int pause) {
-		this.pause = Math.round((float)CLOCK_FREQ * pause / 1000);
-		if (DEBUG) System.out.println("Pause: " + this.pause);
-	}
-	
-	/**
-	 * Sets the tempo in clock ticks
-	 * @param tempo the tempo in beats per minute
-	 */
-	public void setTempo(int tempo) {
-		this.tempo = Math.round((float)CLOCK_FREQ * 60 / tempo);
-		if (DEBUG) System.out.println("Tempo: " + this.tempo);
-	}
-	
-	/**
-	 * Sets what note value constitutes one beat (the lower numeral of the time signature)
-	 * @param time
-	 */
-	public void setTime(int time) { this.time = time; }
-	
-	/**
-	 * Get the tick values into an integer array for sending
-	 * @return the tick values
-	 */
-	private int[] getNotesTones() {
-		int[] tones = new int[song.size()];
-		if (DEBUG) System.out.print("Tones: [");
-		for (int i = 0; i < tones.length; i++) {
-			tones[i] = song.get(i).getNoteTicks();
-			if (DEBUG) {
-				System.out.print(song.get(i).getNoteName());
-				if (i != tones.length-1) System.out.print(", ");
-			}
-		}
-		if (DEBUG) System.out.println("]");
-		return tones;
-	}
-	
-	/**
-	 * Converts and returns beat values derived from the note 
-	 * values in the song. Changes the tempo in accordance 
-	 * with the note values and the time signature. Program 
-	 * fails and exits if a note is too lengthy to be playable.
-	 * 
-	 * @return the beat values for transmission
-	 */
-	private int[] getNotesBeats() {
-		int[] beats = new int[song.size()];
-		float[] noteValues = new float[song.size()];
-		float shortestNoteValue = Float.MIN_VALUE;
-		
-		// find shortest note (means largest number)
-		for (int i = 0; i < noteValues.length; i++) {
-			noteValues[i] = song.get(i).getNoteValue();
-			if (noteValues[i] > shortestNoteValue) shortestNoteValue = noteValues[i];
-		}
-		
-		// convert to ints for use as beats
-		// since all beat values have 3 in numerator,
-		// multiplying by 3 will eliminate all fractions (without needing to calculate GCF)
-		// working with shortest note will make beat values as small as possible
-		// these changes must be accounted for in the tempo
-		tempo /= shortestNoteValue * 3 / time;
-		for (int i = 0; i < beats.length; i++) {
-			beats[i] = (int)Math.rint((shortestNoteValue * 3 / noteValues[i]));
-			// check if note is too lengthy to be playable
-			if (beats[i] * tempo > 65535) {
-				System.err.println("Uh oh, note " + (i+1) + " (" + 
-					song.get(i).getNoteName() + ", " + song.get(i).getNoteValue() + ")" +
-					" is too long to playback on MSP430. Please either increase tempo" +
-					"or shorten the note. Error, exiting"  );
-				System.exit(Error.SYSTEM_ERROR.ordinal());
-			}
-		}
-		
-		if (DEBUG) System.out.println("Beats: " + Arrays.toString(beats));
-		if (DEBUG) System.out.println("New Tempo: " + tempo);
-		return beats;
-	}
-	
-	/**
-	 * Send an 8-bit integer over the serial line.  Only the 8 lowest bits are sent; the remaining bits are discarded.
+	 * Send an 8-bit integer over the serial line.  
+	 * Only the 8 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.
 	 * @throws IOException
 	 */
@@ -189,7 +93,8 @@ public class Writer {
 	}
 
 	/**
-	 * Send a 16-bit integer over the serial line.  Only the 16 lowest bits are sent; the remaining bits are discarded.
+	 * Send a 16-bit integer over the serial line.  
+	 * Only the 16 lowest bits are sent; the remaining bits are discarded.
 	 * @param num the integer to send.
 	 * @throws IOException
 	 */
@@ -204,7 +109,8 @@ public class Writer {
 	}
 
 	/**
-	 * Send the array of beats over the serial line.  As usual, all 24 higher bits are discarded.
+	 * Send the array of beats over the serial line.  
+	 * As usual, all 24 higher bits are discarded.
 	 * @param arr array of beats to send
 	 * @throws IOException
 	 */
@@ -216,19 +122,49 @@ public class Writer {
 
 	/**
 	 * Sends data over the serial line in the appropriate order.
+	 * Also enforces MSP430 memory limits
 	 */
 	void send() {
+		int totalBytes = 0;
+		ArrayList<Integer> data = new ArrayList<Integer>();
+		Song prevSong = null;
+
+		// collect the data to send based off memory limits
+		for (Song song : songs) {
+			// 2 per note for ticks and value, 1 for pause, 1 for length, 2 for tempo
+			totalBytes += 2*song.getLength() + 1 + 1 + 2;
+			if (totalBytes > MAX_BYTES) {
+				if (prevSong == null)
+					System.err.println("No songs to write!");
+				else
+					System.err.println("Memory limit exceeded: only writing up to song \"" + prevSong.getTitle() + "\"");
+				break;
+			}
+			
+			int[] tones = song.getNotesTones();
+			int[] beats = song.getNotesBeats(); // has to be called in advance since tempo will change
+
+			data.add(song.getLength());
+			data.add(song.getPause());
+			data.add(song.getTempo() & 0xFF);	// MSP430 is little endian
+			data.add((song.getTempo() >> 8) & 0xFF);
+			for (int i = 0; i < tones.length; i++) { data.add(tones[i]); data.add(beats[i]); }
+			
+			prevSong = song;
+		}
+		
+		// send said data
 		try {
-			int[] tones = getNotesTones();
-			int[] beats = getNotesBeats();	// has to be called in advance since tempo will change
-			writeByte(song.size());
-			writeByte(pause);
-			writeArray(tones);
-			out.flush();
-			Thread.sleep(40);	// wait for MSP430 to write to flash
-			writeInt(tempo);
-			writeArray(beats);
-			out.flush();
+			if (DEBUG) System.out.println(data.toString());
+			int counter = 0;
+			for (int byteVal : data) {
+				if (counter == MAX_BYTES/2) {
+					Thread.sleep(40);	// wait for MSP430 to write to flash
+				}
+				out.write(byteVal);
+				out.flush();
+				counter++;
+			}
 		}
 		catch (IOException e) {
 			e.printStackTrace();
@@ -250,58 +186,8 @@ public class Writer {
 	}
 	
 	/**
-	 * one argument must be comm port
-	 * must give -f: take file input for song data (pass filename as next argument)
-	 * 
-	 * @param commPorts list of communication ports
-	 * @param args command-line arguments
-	 * @return options data for main() to interpret.  [0] is comm port, 
-	 * and [1] is input file
-	 */
-	private static String[] optParse(List<String> commPorts, String args[]) {
-		String commPort = null;
-		boolean validComm = true;
-		String[] returnVal = new String[2];
-		if (args.length != 3) {
-			System.err.println("comm port and input file are required arguments");
-			System.exit(Error.INVALID_INPUT.ordinal());
-		} 
-		// search for comm port argument.  It can't have a '-' prefix nor be the argument to a '-f'
-		int i = 0;
-		while (i < args.length && commPort == null) {
-			if ((args[i].charAt(0) != '-') && ((i > 0 && !args[i-1].equals("-f")) || i == 0))
-				commPort = args[i];
-			i++;
-		}
-		validComm = !(i == args.length && commPort == null);
-		if (validComm) {
-			// check for '-f' option (file input)
-			for (i = 0; i < args.length; i++) {
-				if (args[i].equals("-f") && (i+1) < args.length) {
-					returnVal[1] = args[i+1];
-					break;
-				}
-			}
-			if (returnVal[1] == null) {
-				System.err.println("No valid input file given. Exiting.");
-				System.exit(Error.INVALID_FILE.ordinal());
-			}
-		}
-		// check if comm port found is valid
-		validComm &= commPorts.contains(commPort);
-		if (!validComm) {
-			System.err.println("No valid communications port given. Choose from these next time:");
-			for (String s : commPorts) System.err.print(s + " ");
-			System.err.println();
-			System.exit(Error.INVALID_INPUT.ordinal());
-		}
-
-		returnVal[0] = commPort;
-		return returnVal;
-	}
-	
-	/**
-	 * See optParse Javadoc for usage cases.
+	 * first argument must be comm port
+	 * rest of arguments are input XML song files
 	 * @param args
 	 */
 	public static void main(String args[]) {
@@ -318,10 +204,19 @@ public class Writer {
 		}
 
 		// Options parsing
-		String[] opts = optParse(commPorts, args);
-		String commPort = opts[0];
-		String input = opts[1];
-
+		if (args.length < 2) {
+			System.err.println("comm port and input file are required arguments");
+			System.exit(Error.INVALID_INPUT.ordinal());
+		}
+		
+		// check if comm port asked for is valid and open it up
+		String commPort = args[0];
+		if (!commPorts.contains(commPort)) {
+			System.err.println("No valid communications port given. Choose from these next time:");
+			for (String s : commPorts) System.err.print(s + " ");
+			System.err.println();
+			System.exit(Error.INVALID_INPUT.ordinal());
+		}
 		try {
 			w = new Writer(commPort);
 		} catch (Exception e) {
@@ -329,11 +224,17 @@ public class Writer {
 			System.exit(Error.SYSTEM_ERROR.ordinal());
 		}
 		
+		// parse all of the input song files
+		int i = 1;
 		try {
-			XMLParser xp = new XMLParser(w);
-			xp.parse(input);
+			for (i = 1; i < args.length; i++) {
+				Song song = new Song();
+				XMLParser xp = new XMLParser(song);
+				songs.add(song);
+				xp.parse(args[i]);
+			}
 		} catch (FileNotFoundException e) {
-			System.err.println("Input XML File not found.  Exiting.");
+			System.err.println("Input XML File " + args[i] + " not found.  Exiting.");
 			System.exit(Error.INVALID_FILE.ordinal());
 		} catch (SAXException e) {
 			e.printStackTrace();
@@ -342,6 +243,8 @@ public class Writer {
 			e.printStackTrace();
 			System.exit(Error.SYSTEM_ERROR.ordinal());
 		}
+		
+		// send all of them across to the MSP430
 		w.send();
 		w.exit();
 	}

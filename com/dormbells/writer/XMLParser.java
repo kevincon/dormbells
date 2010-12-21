@@ -40,7 +40,7 @@ public class XMLParser extends DefaultHandler {
 	private CharArrayWriter contents = new CharArrayWriter();
 	private XMLReader xr;
 	
-	private Writer w;
+	private Song song;
 	
 	// Override methods of the DefaultHandler class
 	// to gain notification of SAX Events.
@@ -59,18 +59,21 @@ public class XMLParser extends DefaultHandler {
 	public void endElement( String namespaceURI,
 			String localName,
 			String qName ) throws SAXException {
+		
+		if (localName.equals("title"))
+			song.setTitle(contents.toString().trim());
 		if (localName.equals("tempo"))
-			w.setTempo(Integer.valueOf(contents.toString().trim()));
+			song.setTempo(Integer.valueOf(contents.toString().trim()));
 		else if (localName.equals("pause"))
-			w.setPause(Integer.valueOf(contents.toString().trim()));
+			song.setPause(Integer.valueOf(contents.toString().trim()));
 		else if (localName.equals("name"))
 			noteName = contents.toString();
 		else if (localName.equals("value"))
 			noteValue = contents.toString().trim();
 		else if (localName.equals("note"))
-			w.addNote(new Note(noteName, noteValue));
+			song.addNote(new Note(noteName, noteValue));
 		else if (localName.equals("time"))
-			w.setTime(Integer.valueOf(contents.toString().trim()));
+			song.setTime(Integer.valueOf(contents.toString().trim()));
 	}
 	
 	public void characters(char[] ch, int start, int length) throws SAXException {
@@ -81,8 +84,8 @@ public class XMLParser extends DefaultHandler {
 		xr.parse(new InputSource(new FileReader(filename)));
 	}
 
-	XMLParser(Writer w) throws SAXException {
-		this.w = w;
+	XMLParser(Song song) throws SAXException {
+		this.song = song;
 		xr = XMLReaderFactory.createXMLReader();	// create the SAX 2 parser
 		xr.setContentHandler(this);
 	}

@@ -4,6 +4,7 @@
 	<!-- Westminster Quarters -->
 	<!-- Notes from http://en.wikipedia.org/wiki/Westminster_Quarters -->
 
+	<title>Westminster Quarters</title>
 	<tempo>110</tempo>	<!-- bpm -->
 	<pause>50</pause>		<!-- milliseconds -->
 	<time>4</time>			<!-- lower numeral of time signature -->

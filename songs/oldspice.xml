@@ -4,6 +4,7 @@
 	<!-- Old Spice Jingle -->
 	<!-- Credit Sriram Radhakrishnan -->
 
+	<title>Old Spice Jingle</title>
 	<tempo>170</tempo>	<!-- bpm -->
 	<pause>50</pause>		<!-- milliseconds -->
 	<time>4</time>			<!-- lower numeral of time signature -->
