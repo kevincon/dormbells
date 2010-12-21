@@ -32,14 +32,23 @@
 #define			PWM_DIR				  			P1DIR
 #define			PWM_OUT								P1OUT
 
-#define     BUTTON                BIT3
-#define     BUTTON_OUT            P1OUT
-#define     BUTTON_DIR            P1DIR
-#define     BUTTON_IN             P1IN
-#define     BUTTON_IE             P1IE
-#define     BUTTON_IES            P1IES
-#define     BUTTON_IFG            P1IFG
-#define     BUTTON_REN            P1REN
+#define     P_BUTTON                BIT3
+#define     P_BUTTON_OUT            P1OUT
+#define     P_BUTTON_DIR            P1DIR
+#define     P_BUTTON_IN             P1IN
+#define     P_BUTTON_IE             P1IE
+#define     P_BUTTON_IES            P1IES
+#define     P_BUTTON_IFG            P1IFG
+#define     P_BUTTON_REN            P1REN
+
+#define     C_BUTTON                BIT4
+#define     C_BUTTON_OUT            P1OUT
+#define     C_BUTTON_DIR            P1DIR
+#define     C_BUTTON_IN             P1IN
+#define     C_BUTTON_IE             P1IE
+#define     C_BUTTON_IES            P1IES
+#define     C_BUTTON_IFG            P1IFG
+#define     C_BUTTON_REN            P1REN
 
 // FLASH SEGMENTS  ===========================================
 #define SEGMENT_A (0x10FF)
@@ -57,24 +66,17 @@
 //       440 Hz, find the # of SMCLK ticks needed to
 //       create a frequency of 880 Hz = ~37. 
 // D major scale: R,D,E,F#,G,A,B,C#,D (294 Hz - 587 Hz)
-#ifdef SAFETY
-unsigned const int notes[] = {
-	0, 56, 50, 44, 42, 37, 33, 30, 28
-};
-#endif
-
 
 // MELODY and TIMING  =======================================
 //  melody[] is an array of notes, accompanied by beats[], 
 //  which sets each note's relative length (higher #, longer note) 
-unsigned char *melody;
-unsigned char *beats;
-unsigned char length;  // Melody length, for looping.
+volatile unsigned char *song;
+volatile unsigned char length;
 
 //tempo in SMCLK ticks per beat
-unsigned int tempo; 
+volatile unsigned int tempo; 
 // Set length of pause between notes
-unsigned char pause; // ~1 ms
+volatile unsigned char pause; // ~1 ms
 
 // excuse the strong language, but fuck you GCC optimizations
 // the missing volatile messed with my head for an hour
@@ -84,11 +86,12 @@ volatile unsigned int duration = 0;		// current duration
 // FUNCTION PROTOTYPES  ======================================
 
 void init_leds(void);
-void init_button(void);
+void init_buttons(void);
 void init_clocks(void);
 void init_pwm(void);
 void init_consts(void);
 
+void change_consts(void);
 void play_song(void);
 void play_tone(void);
 
@@ -99,7 +102,7 @@ int main(void)
 	WDTCTL = WDTPW + WDTHOLD;               // Stop WDT
 
 	init_clocks();
-	init_button();
+	init_buttons();
 #ifdef DEBUG
 	init_leds();
 #endif
@@ -119,14 +122,21 @@ void init_clocks(void)
 	BCSCTL2 |= DIVS_3;			// SMCLK = MCLK/8 = 131,072 Hz
 }
 
-void init_button(void)		// Configure Push Button 
+void init_buttons(void)		// configure push buttons
 {
-	BUTTON_DIR &= ~BUTTON;	// change to input
-	BUTTON_OUT |= BUTTON;		// output is HIGH
-	BUTTON_REN |= BUTTON;		// enable pullup resistor
-	BUTTON_IES |= BUTTON;		// interrupt on falling edge
-	BUTTON_IFG &= ~BUTTON;	// clear interrupt flag
-	BUTTON_IE |= BUTTON;		// enable interrupt
+	P_BUTTON_DIR &= ~P_BUTTON;	// change to input
+	P_BUTTON_OUT |= P_BUTTON;		// output is HIGH
+	P_BUTTON_REN |= P_BUTTON;		// enable pullup resistor
+	P_BUTTON_IES |= P_BUTTON;		// interrupt on falling edge
+	P_BUTTON_IFG &= ~P_BUTTON;	// clear interrupt flag
+	P_BUTTON_IE |= P_BUTTON;		// enable interrupt
+
+	C_BUTTON_DIR &= ~C_BUTTON;	// change to input
+	C_BUTTON_OUT |= C_BUTTON;		// output is HIGH
+	C_BUTTON_REN |= C_BUTTON;		// enable pullup resistor
+	C_BUTTON_IES |= C_BUTTON;		// interrupt on falling edge
+	C_BUTTON_IFG &= ~C_BUTTON;	// clear interrupt flag
+	C_BUTTON_IE |= C_BUTTON;		// enable interrupt
 }
 
 void init_leds(void)
@@ -147,16 +157,30 @@ void init_pwm(void)
 
 void init_consts(void)
 {
-	melody = (unsigned char *)(INFOMEM + 2);
-	beats = (unsigned char *)(INFOMEM + 192/2 + 2);
+	song = (unsigned char *)(INFOMEM + 4);
 	length = *(unsigned char *)(INFOMEM);  
 	pause = *(unsigned char *)(INFOMEM + 1);
-	tempo = *(unsigned int *)(INFOMEM + 192/2);
+	tempo = *(unsigned int *)(INFOMEM + 2);
+}
+
+void change_consts(void)
+{
+	if ((*(song + (length << 1)) == 0xFF) || 
+			(*(song + (length << 1)) >= (INFOMEM+192))) {
+		// reset if we've cycled through all
+		init_consts();
+	}
+	else {
+		// update consts for next song
+		song += (length << 1) + 4;	// 4 for length, pause, tempo
+		length = *(song - 4);
+		pause = *(song - 3);
+		tempo = *(unsigned int *)(song - 2);
+	}
 }
 	
 void play_song(void)
 {
-	// Set up a counter to pull from melody[] and beats[]
 	unsigned char i;
 
 	__enable_interrupt();			// enable nested interrupts (since called from one)
@@ -164,13 +188,10 @@ void play_song(void)
 	LED_OUT |= LED0;		// turn on red LED
 #endif
 
-	for (i = 0; i < length; i++) {
-#ifdef SAFETY
-		tone = notes[melody[i]];
-#else
-		tone = melody[i];
-#endif
-		duration = beats[i] * tempo;
+	// loop through all notes in the song
+	for (i = 0; i < (length << 1); i += 2) {
+		tone = song[i];	// tone is first byte
+		duration = song[i+1] * tempo; // beats is second byte
 		
 		play_tone(); 
 		// A pause between notes...
@@ -201,10 +222,20 @@ void play_tone(void)
 
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
 {   
-	BUTTON_IFG = 0;  				// clear interrupt flag
-	BUTTON_IE &= ~BUTTON; 	//  Debounce (no multiple presses)
-	play_song();
-	BUTTON_IE |= BUTTON;		// reenable interrupt
+	P_BUTTON_IE &= ~P_BUTTON; 	// no multiple presses
+	C_BUTTON_IE &= ~C_BUTTON;		// no interleaving
+
+	if (!(P_BUTTON_IN & P_BUTTON)) {	// indicates playback
+		P_BUTTON_IFG = 0;  				// clear interrupt flag
+		play_song();
+	}
+	else {
+		C_BUTTON_IFG = 0;
+		change_consts();
+	}
+
+	P_BUTTON_IE |= P_BUTTON;		// reenable interrupt
+	C_BUTTON_IE |= C_BUTTON;		// reenable interrupt
 }
 
 interrupt(TIMERA0_VECTOR) TACCR0_ISR (void)

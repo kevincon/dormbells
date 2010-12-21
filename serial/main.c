@@ -27,12 +27,8 @@
  * the Can-Can.
  */
 
-#if defined(__GNUC__ == 4)
 #include <io.h>
 #include <signal.h>
-#else
-#include "msp430g2231.h"
-#endif
 
 // PINS  ===========================================
 #define     LED0                  BIT0
@@ -87,6 +83,7 @@ unsigned char read(void);
 int main(void)
 {
 	unsigned char *ptr;
+	unsigned char total_bytes;
 
 	WDTCTL = WDTPW + WDTHOLD;               // Stop WDT
 	init_clocks();
@@ -102,32 +99,27 @@ int main(void)
 
 	i = 0;		
 	__enable_interrupt();			// interrupt for software UART
-	while (!buffer[0]);				// wait to receive length data
-	while (i < buffer[0]+2);	// wait to get all song data
+	while (!buffer[0]);				// wait to receive count of total bytes
+	i = 0; total_bytes = buffer[0];
+	while (i < total_bytes && i < BUF_SIZE);	// wait to get all (or a buffer's worth) of data
 	__disable_interrupt();		// no interrupts during flash write
 
-	// write constants to information memory (bottom of Segment D)
+	// write as much as possible within the buffer
 	ptr = (unsigned char *)INFOMEM;
-	write_byte(buffer[0], ptr++);
-	write_byte(buffer[1], ptr++);
-
-	// write melody 
-	for (i = 0; i < LENGTH; i++)
-		write_byte(buffer[i+2], ptr++);
+	for (i = 0; i < total_bytes && i < BUF_SIZE; i++)
+		write_byte(buffer[i], ptr++);
 
 	i = 0;
-	__enable_interrupt();		// read the last half of data
-	while (i < LENGTH + 2);	// wait for tempo & beats
-	__disable_interrupt();
+	// get and write the rest of it
+	if (total_bytes-BUF_SIZE > 0) {
+		__enable_interrupt();
+		while (i < (total_bytes-BUF_SIZE));
+		__disable_interrupt();
 
-	// write tempo to middle of available info mem
-	ptr = (unsigned char *)(INFOMEM + 192 / 2);
-	write_word((unsigned int *)buffer, (unsigned int *)ptr);
-	ptr += 2;
-
-	// write beats
-	for (i = 0; i < LENGTH; i++)
-		write_byte(buffer[i+2], ptr++);
+		// write
+		for (i = 0; i < (total_bytes-BUF_SIZE); i++)
+		write_byte(buffer[i], ptr++);
+	}
 
 	// we're done!
 	LED_OUT &= ~(LED0);
@@ -225,12 +217,7 @@ unsigned char read()
 	return 0xFF;
 }
 
-#if defined(__GNUC__)
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
-#else
-#pragma vector=PORT1_VECTOR
-__interrupt void PORT1_ISR(void)
-#endif
 {
 #ifdef SAFETY
 	unsigned char temp;

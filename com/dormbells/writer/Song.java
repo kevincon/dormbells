@@ -66,6 +66,7 @@ public class Song {
 
 	/**
 	 * Sets the pause in between the notes in clock ticks
+	 * TODO: Enforce Pause limits
 	 * @param pause the pause in milliseconds
 	 */
 	public void setPause(int pause) {

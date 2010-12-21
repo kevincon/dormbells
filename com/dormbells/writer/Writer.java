@@ -90,34 +90,7 @@ public class Writer {
 	 */
 	private void writeByte(int num) throws IOException {
 		out.write(num);
-	}
-
-	/**
-	 * Send a 16-bit integer over the serial line.  
-	 * Only the 16 lowest bits are sent; the remaining bits are discarded.
-	 * @param num the integer to send.
-	 * @throws IOException
-	 */
-	private void writeInt(int num) throws IOException {
-		// since all Java variables are signed and 
-		// locals take 32-bits in JVM, might as well use ints
-		int LSB = num & 0xFF;
-		int MSB = (num >> 8) & 0xFF;
-		// MSP430 is little endian
-		out.write(LSB);
-		out.write(MSB);
-	}
-
-	/**
-	 * Send the array of beats over the serial line.  
-	 * As usual, all 24 higher bits are discarded.
-	 * @param arr array of beats to send
-	 * @throws IOException
-	 */
-	private void writeArray(int[] arr) throws IOException {
-		for (int i = 0; i < arr.length; i++) {
-			out.write((byte) arr[i]);
-		}
+		out.flush();
 	}
 
 	/**
@@ -155,14 +128,15 @@ public class Writer {
 		
 		// send said data
 		try {
-			if (DEBUG) System.out.println(data.toString());
+			if (DEBUG) for (int i : data) System.out.printf("0x%x, ", i);
 			int counter = 0;
+			writeByte(totalBytes); 	// send total bytes
+			Thread.sleep(10);
 			for (int byteVal : data) {
 				if (counter == MAX_BYTES/2) {
 					Thread.sleep(40);	// wait for MSP430 to write to flash
 				}
-				out.write(byteVal);
-				out.flush();
+				writeByte(byteVal);
 				counter++;
 			}
 		}
