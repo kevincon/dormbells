@@ -1,0 +1,7 @@
+Install librxtx-java through package manager.
+
+Download librxtx binaries at:
+http://rxtx.qbang.org/wiki/index.php/Download  
+
+Install using instructions at:
+http://rxtx.qbang.org/wiki/index.php/Installation_on_Linux
