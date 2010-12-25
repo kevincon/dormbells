@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<song>
+	<!-- Jingle Bells -->
+	<!-- http://wiki.answers.com/Q/What_are_the_notes_to_play_jingle_bells_on_the_electric_organ_or_piano -->
+
+	<title>Jingle Bells</title>
+	<tempo>170</tempo>	<!-- bpm -->
+	<pause>10</pause>		<!-- milliseconds -->
+	<time>4</time>			<!-- lower numeral of time signature -->
+
+	<notes>
+		<!-- valid note values are powers of 2 -->
+		<!-- 4 is quarter note, 8 is eighth note, etc. -->
+		<!-- for valid SPN see here: http://en.wikipedia.org/wiki/Piano_key_frequencies -->
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4.</value></note>
+		
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4.</value></note>
+
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>G4</name>	<value>4</value></note>
+		<note><name>C4</name>	<value>4</value></note>
+		<note><name>D4</name>	<value>4</value></note>
+		
+		<note><name>E4</name>	<value>4.</value></note>
+		
+		<note><name>R</name>	<value>16</value></note>
+		
+		<note><name>F4</name>	<value>4</value></note>
+		<note><name>F4</name>	<value>4</value></note>
+		<note><name>F4</name>	<value>4</value></note>
+		<note><name>F4</name>	<value>4</value></note>
+		
+		<note><name>F4</name>	<value>4</value></note>		
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4.</value></note>
+		
+		<note><name>E4</name>	<value>4</value></note>		
+		<note><name>D4</name>	<value>4</value></note>
+		<note><name>D4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4</value></note>
+		
+		<note><name>D4</name>	<value>4.</value></note>
+		<note><name>G4</name>	<value>4.</value></note>
+
+		<!-- now repeat -->
+		
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4.</value></note>
+		
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4.</value></note>
+
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>G4</name>	<value>4</value></note>
+		<note><name>C4</name>	<value>4</value></note>
+		<note><name>D4</name>	<value>4</value></note>
+		
+		<note><name>E4</name>	<value>4.</value></note>
+		
+		<note><name>R</name>	<value>16</value></note>
+		
+		<note><name>F4</name>	<value>4</value></note>
+		<note><name>F4</name>	<value>4</value></note>
+		<note><name>F4</name>	<value>4</value></note>
+		<note><name>F4</name>	<value>4</value></note>
+		
+		<note><name>F4</name>	<value>4</value></note>		
+		<note><name>E4</name>	<value>4</value></note>
+		<note><name>E4</name>	<value>4.</value></note>
+		
+		<!-- ending -->
+		
+		<note><name>G4</name>	<value>4</value></note>		
+		<note><name>G4</name>	<value>4</value></note>
+		<note><name>F4</name>	<value>4</value></note>
+		<note><name>D4</name>	<value>4</value></note>
+		
+		<note><name>C4</name>	<value>4.</value></note>
+
+		<note><name>R</name>	<value>16</value></note>
+	</notes>
+</song>
