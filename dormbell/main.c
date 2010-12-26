@@ -246,7 +246,7 @@ interrupt(PORT1_VECTOR) PORT1_ISR(void)
 		P_BUTTON_IFG = 0;  				// clear interrupt flag
 		play_song();
 	}
-	else {
+	else if (!(C_BUTTON_IN & C_BUTTON)) {
 		C_BUTTON_IFG = 0;
 		change_consts();
 	}
