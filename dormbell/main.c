@@ -91,6 +91,7 @@ void init_clocks(void);
 void init_pwm(void);
 void init_consts(void);
 
+static void __inline__ delay(register unsigned int n);
 void change_consts(void);
 void play_song(void);
 void play_tone(void);
@@ -220,8 +221,24 @@ void play_tone(void)
 	while(TACTL & MC_2);	// wait for timer to stop (tone is done playing)
 }
 
+// Delay Routine from mspgcc help file
+// Takes 3 clock cycles to execute 1 iteration
+static void __inline__ delay(register unsigned int n)
+{
+	__asm__ __volatile__ (
+			"1: \n"
+			" dec %[n] \n"
+			" jne 1b \n"
+			: [n] "+r"(n));
+}
+
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
 {   
+	// 1MHz clock with 3 clock cycles per iteration
+	// means 4000 = 12ms
+	// this is a terrible debounce idea, but 
+	// hopefully it works
+	delay(4000);
 	P_BUTTON_IE &= ~P_BUTTON; 	// no multiple presses
 	C_BUTTON_IE &= ~C_BUTTON;		// no interleaving
 
