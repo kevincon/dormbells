@@ -1,0 +1,7 @@
+can-can = 50 notes
+imperial = 73 notes
+oldspice = 8 notes
+westminster = 19 notes
+
+Total = 150 notes
+
