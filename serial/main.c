@@ -29,37 +29,15 @@
 
 #include <io.h>
 #include <signal.h>
+#include "serial.h"
+#include "pins.h"
+#include "flash.h"
 
-// PINS  ===========================================
-#define     LED0                  BIT0
-#define     LED1                  BIT6
-#define     LED_DIR               P1DIR
-#define     LED_OUT               P1OUT
-
-#define			RXD										BIT2
 // DEFINES  ========================================
 #define SAFETY
 
-#define SEGMENT_A (0x10FF)
-#define SEGMENT_B (0x10FF - 64)
-#define SEGMENT_C (0x10FF - 128)
-#define SEGMENT_D (0x10FF - 192)
-#define INFOMEM		(0x1000)
-
 #define BUF_SIZE	96
 #define LENGTH		(*(unsigned char *)(INFOMEM))	// where length is written
-
-#define BAUD_RATE 2400
-#define DELAY_CENTER 190	// 54 start bit center + 136 to jump to LSB center
-#define DELAY_INTRA	134
-#define DELAY_STOP	56	// nee 58
-
-/*
-#define BAUD_RATE 1200
-#define DELAY_CENTER 398 	// nee 124 start bit center+275 to jump to LSB center
-#define DELAY_INTRA	267	// nee 272
-#define DELAY_STOP	132		// nee 127
-*/
 
 // GLOBALS  ========================================
 volatile unsigned char buffer[BUF_SIZE];	// software UART buffer
@@ -69,14 +47,6 @@ volatile unsigned char i;		// buffer position
 
 void init_leds(void);
 void init_clocks(void);
-void init_serial(void);
-
-void erase_seg(char *);
-void write_byte(unsigned char, unsigned char *);
-void write_word(unsigned int *, unsigned int *);
-
-static void __inline__ delay(register unsigned int n);
-unsigned char read(void);
 
 // CODE  ===========================================
 
@@ -138,83 +108,6 @@ void init_leds(void)
 {
 	LED_DIR |= LED0 + LED1;                          
 	LED_OUT &= ~(LED0 + LED1);  
-}
-
-void init_serial()
-{
-	P1DIR &= ~(RXD);	// change to input
-	P1IES |= RXD;			// interrupt on falling edge
-	P1IFG &= ~(RXD);	// clear interrupt flag
-	P1IE |= RXD;			// enable interrupt
-}
-
-void erase_seg(char *ptr)
-{
-	FCTL3 = FWKEY;						// clear LOCK
-	FCTL1 = FWKEY + ERASE;		// enable segment erase
-	*ptr = 0;									// dummy write, erase segment
-	FCTL1 = FWKEY;						// clear ERASE bit
-	FCTL3 = FWKEY + LOCK;			// set LOCK
-}
-
-void write_byte(unsigned char data, unsigned char *ptr)
-{
-	FCTL3 = FWKEY;						// clear LOCK
-	FCTL1 = FWKEY + WRT;			// enable write
-	*ptr = data;							// write data
-	FCTL1 = FWKEY;						// clear WRITE bit
-	FCTL3 = FWKEY + LOCK;			// set LOCK
-}
-
-void write_word(unsigned int *data, unsigned int *ptr)
-{
-	FCTL3 = FWKEY;						// clear LOCK
-	FCTL1 = FWKEY + WRT;			// enable write
-	*ptr = *data;							// write data
-	FCTL1 = FWKEY;						// clear WRITE bit
-	FCTL3 = FWKEY + LOCK;			// set LOCK
-}
-
-// Delay Routine from mspgcc help file
-// Takes 3 clock cycles to execute 1 iteration
-static void __inline__ delay(register unsigned int n)
-{
-	__asm__ __volatile__ (
-			"1: \n"
-			" dec %[n] \n"
-			" jne 1b \n"
-			: [n] "+r"(n));
-}
-
-// ideas borrowed from David Mellis's SoftwareSerial 
-// and Mikal Hart's NewSoftSerial for Arduino
-unsigned char read()
-{
-	unsigned char val = 0;
-
-	// make sure line has gone low (we're on a start bit)
-	if (!(P1IN & RXD)) {
-		unsigned char bit;
-		// jump to middle of first data bit
-		delay(DELAY_CENTER);
-
-		// bit to potentially write: goes from 0 (LSB) to 7 (MSB)
-		for (bit = 1; bit; bit <<= 1) {
-
-			// read bit
-			if (P1IN & RXD)
-				val |= bit;
-
-			// jump to middle of next bit
-			delay(DELAY_INTRA);
-		}
-		// delay for stop bit
-		delay(DELAY_STOP);
-
-		return val;
-	}
-	// didn't get data
-	return 0xFF;
 }
 
 interrupt(PORT1_VECTOR) PORT1_ISR(void)

@@ -1,7 +1,7 @@
 CC=msp430-gcc
 CFLAGS=-Os -Wall -g -mmcu=msp430x2012
 
-OBJS=main.o
+OBJS=main.o serial.o flash.o
 
 
 all: $(OBJS)

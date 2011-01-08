@@ -20,35 +20,8 @@
 
 #include <io.h>
 #include <signal.h>
-
-// PINS  ===========================================
-#define     LED0                  BIT0
-#define     LED1                  BIT6
-#define     LED_DIR               P1DIR
-#define     LED_OUT               P1OUT
-
-#define			PWM					  				BIT6
-#define			PWM_SEL				  			P1SEL
-#define			PWM_DIR				  			P1DIR
-#define			PWM_OUT								P1OUT
-
-#define     P_BUTTON                BIT3
-#define     P_BUTTON_OUT            P1OUT
-#define     P_BUTTON_DIR            P1DIR
-#define     P_BUTTON_IN             P1IN
-#define     P_BUTTON_IE             P1IE
-#define     P_BUTTON_IES            P1IES
-#define     P_BUTTON_IFG            P1IFG
-#define     P_BUTTON_REN            P1REN
-
-#define     C_BUTTON                BIT4
-#define     C_BUTTON_OUT            P1OUT
-#define     C_BUTTON_DIR            P1DIR
-#define     C_BUTTON_IN             P1IN
-#define     C_BUTTON_IE             P1IE
-#define     C_BUTTON_IES            P1IES
-#define     C_BUTTON_IFG            P1IFG
-#define     C_BUTTON_REN            P1REN
+#include "pins.h"
+#include "../serial/serial.h"
 
 // FLASH SEGMENTS  ===========================================
 #define SEGMENT_A (0x10FF)
@@ -83,6 +56,17 @@ volatile unsigned char pause; // ~1 ms
 volatile unsigned int tone = 0; 			// current tone
 volatile unsigned int duration = 0;		// current duration
 
+#ifndef BUTTON
+#define BUFSIZE 50
+volatile unsigned char buffer[BUFSIZE];
+volatile unsigned char i;
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#define FALSE 0
+#endif
+
 // FUNCTION PROTOTYPES  ======================================
 
 void init_leds(void);
@@ -91,10 +75,10 @@ void init_clocks(void);
 void init_pwm(void);
 void init_consts(void);
 
-static void __inline__ delay(register unsigned int n);
 void change_consts(void);
 void play_song(void);
 void play_tone(void);
+int verify_bytes(void);
 
 // CODE  =====================================================
 
@@ -104,6 +88,9 @@ int main(void)
 
 	init_clocks();
 	init_buttons();
+#ifndef BUTTON
+	init_serial();
+#endif
 #ifdef DEBUG
 	init_leds();
 #endif
@@ -125,12 +112,14 @@ void init_clocks(void)
 
 void init_buttons(void)		// configure push buttons
 {
+#ifdef BUTTON
 	P_BUTTON_DIR &= ~P_BUTTON;	// change to input
 	P_BUTTON_OUT |= P_BUTTON;		// output is HIGH
 	P_BUTTON_REN |= P_BUTTON;		// enable pullup resistor
 	P_BUTTON_IES |= P_BUTTON;		// interrupt on falling edge
 	P_BUTTON_IFG &= ~P_BUTTON;	// clear interrupt flag
 	P_BUTTON_IE |= P_BUTTON;		// enable interrupt
+#endif
 
 	C_BUTTON_DIR &= ~C_BUTTON;	// change to input
 	C_BUTTON_OUT |= C_BUTTON;		// output is HIGH
@@ -221,38 +210,56 @@ void play_tone(void)
 	while(TACTL & MC_2);	// wait for timer to stop (tone is done playing)
 }
 
-// Delay Routine from mspgcc help file
-// Takes 3 clock cycles to execute 1 iteration
-static void __inline__ delay(register unsigned int n)
+int verify_bytes(void)
 {
-	__asm__ __volatile__ (
-			"1: \n"
-			" dec %[n] \n"
-			" jne 1b \n"
-			: [n] "+r"(n));
+	// TODO: check that the bytes in the buffer from 0 to i-1 inclusive
+	// are equal to the desired byte pattern
+	// if so, erase the buffer and return true
+	return FALSE;
 }
 
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
 {   
+#ifdef BUTTON
 	// 1MHz clock with 3 clock cycles per iteration
 	// means 4000 = 12ms
 	// this is a terrible debounce idea, but 
 	// hopefully it works
 	delay(4000);
 	P_BUTTON_IE &= ~P_BUTTON; 	// no multiple presses
-	C_BUTTON_IE &= ~C_BUTTON;		// no interleaving
 
 	if (!(P_BUTTON_IN & P_BUTTON)) {	// indicates playback
+		C_BUTTON_IE &= ~C_BUTTON;		// no interleaving
 		P_BUTTON_IFG = 0;  				// clear interrupt flag
 		play_song();
 	}
+#else
+	unsigned char temp;
+
+	P1IE &= ~(RXD);       // disable interrupt
+	if (!(P1IN & RXD)) {	// indicates playback
+		P1IFG &= ~(RXD);      // clear interrupt flag
+		temp = read();
+		if (temp != 0xFF) {   // don't store in buffer if error
+			buffer[i++] = temp;
+		}
+		P1IE |= RXD;          // enable interrupt
+	}
+	if (verify_bytes())
+		play_song();
+
+#endif
 	else if (!(C_BUTTON_IN & C_BUTTON)) {
 		C_BUTTON_IFG = 0;
 		change_consts();
 		play_song();
 	}
 
+#ifdef BUTTON
 	P_BUTTON_IE |= P_BUTTON;		// reenable interrupt
+#else
+	P1IE |= RXD;
+#endif
 	C_BUTTON_IE |= C_BUTTON;		// reenable interrupt
 }
 
