@@ -222,20 +222,15 @@ int verify_bytes(void)
 	
 	unsigned char buffer_test[BUFSIZE] = (0xABCD);
 
-	for (j = 0; j <= b_pos - 1; j++) {
-		if (buffer[j] != buffer_test[j]) {
-			for (j = 0; j < BUFSIZE; j++) {
-				buffer[j] = 0;
-			}
-			b_pos = 0;
-			return FALSE;
-		}
+	for (j = 0; j < b_pos && buffer[j] == buffer_test[j]; j++);
+	if (j == b_pos && b_pos == BUFSIZE) {	// if the buffer is right and full
+		b_pos = 0;	// resetting the buffer pos is equivalent to erasing
+		return TRUE;
 	}
-	for (j = 0; j < BUFSIZE; j++) {
-		buffer[j] = 0;
-	}
-	b_pos = 0;
-	return TRUE;
+	else if (j < b_pos && b_pos == BUF_SIZE)	// if the buffer is wrong but full
+		b_pos = 0;
+	// the last case is the buffer is not full. don't erase then
+	return FALSE;
 }
 
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
@@ -265,8 +260,10 @@ interrupt(PORT1_VECTOR) PORT1_ISR(void)
 		}
 		P1IE |= RXD;          // enable interrupt
 	}
-	if (verify_bytes())
+	if (verify_bytes()) {		// we got the go ahead
+		P1IE &= ~(RXD);				// disable interrupt
 		play_song();
+	}
 
 #endif
 	else if (!(C_BUTTON_IN & C_BUTTON)) {
