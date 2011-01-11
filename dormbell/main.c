@@ -59,7 +59,7 @@ volatile unsigned int duration = 0;		// current duration
 #ifndef BUTTON
 #define BUFSIZE 50
 volatile unsigned char buffer[BUFSIZE];
-volatile unsigned char i;
+volatile unsigned char b_pos;
 #endif
 
 #ifndef TRUE
@@ -212,10 +212,30 @@ void play_tone(void)
 
 int verify_bytes(void)
 {
-	// TODO: check that the bytes in the buffer from 0 to i-1 inclusive
+	// TODO: check that the bytes in the buffer from 0 to b_pos-1 inclusive
 	// are equal to the desired byte pattern
 	// if so, erase the buffer and return true
-	return FALSE;
+
+	unsigned char j;
+	
+	//kcon: testing for 2 Byte packet "0xABCD"
+	
+	unsigned char buffer_test[BUFSIZE] = (0xABCD);
+
+	for (j = 0; j <= b_pos - 1; j++) {
+		if (buffer[j] != buffer_test[j]) {
+			for (j = 0; j < BUFSIZE; j++) {
+				buffer[j] = 0;
+			}
+			b_pos = 0;
+			return FALSE;
+		}
+	}
+	for (j = 0; j < BUFSIZE; j++) {
+		buffer[j] = 0;
+	}
+	b_pos = 0;
+	return TRUE;
 }
 
 interrupt(PORT1_VECTOR) PORT1_ISR(void)
@@ -241,7 +261,7 @@ interrupt(PORT1_VECTOR) PORT1_ISR(void)
 		P1IFG &= ~(RXD);      // clear interrupt flag
 		temp = read();
 		if (temp != 0xFF) {   // don't store in buffer if error
-			buffer[i++] = temp;
+			buffer[b_pos++] = temp;
 		}
 		P1IE |= RXD;          // enable interrupt
 	}
