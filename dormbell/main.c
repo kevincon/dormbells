@@ -57,7 +57,7 @@ volatile unsigned int tone = 0; 			// current tone
 volatile unsigned int duration = 0;		// current duration
 
 #ifndef BUTTON
-#define BUFSIZE 50
+#define BUFSIZE 2
 volatile unsigned char buffer[BUFSIZE];
 volatile unsigned char b_pos;
 #endif
